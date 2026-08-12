@@ -3,60 +3,83 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
-
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-const SUPABASE_PUBLISHABLE_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+const SUPABASE_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const FUNCTION_URL =
-  "https://fizsmmfgojsafjhlschq.supabase.co/functions/v1/transfer";
+  `${SUPABASE_URL}/functions/v1/transfer-v2`;
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const TRANSFER_SECONDS = 5 * 60;
 
 const supabase = createClient(
   SUPABASE_URL,
-  SUPABASE_PUBLISHABLE_KEY
+  SUPABASE_KEY
 );
 
 export default function Home() {
-  const [file, setFile] = useState(null);
   const [theme, setTheme] = useState("dark");
+
+  const [file, setFile] = useState(null);
 
   const [uploading, setUploading] = useState(false);
 
   const [transferCode, setTransferCode] = useState("");
+
   const [expiresAt, setExpiresAt] = useState(null);
 
-  const [receiveCode, setReceiveCode] = useState("");
-  const [downloading, setDownloading] = useState(false);
+  const [remainingSeconds, setRemainingSeconds] =
+    useState(0);
+
+  const [receiveCode, setReceiveCode] =
+    useState("");
+
+  const [downloading, setDownloading] =
+    useState(false);
 
   const [message, setMessage] = useState("");
+
   const [error, setError] = useState("");
+
+  const [origin, setOrigin] = useState("");
 
   const fileInputRef = useRef(null);
 
-  /* =========================
-     THEME
-  ========================= */
+  const qrAttempted = useRef(false);
+
+  /*
+   * =========================================
+   * INITIAL
+   * =========================================
+   */
 
   useEffect(() => {
+    setOrigin(window.location.origin);
+
     const savedTheme =
       localStorage.getItem("honeyshare-theme");
 
     if (
-      savedTheme === "light" ||
-      savedTheme === "dark"
+      savedTheme === "dark" ||
+      savedTheme === "light"
     ) {
       setTheme(savedTheme);
     }
   }, []);
 
+  /*
+   * =========================================
+   * THEME
+   * =========================================
+   */
+
   const toggleTheme = () => {
     const newTheme =
-      theme === "dark"
-        ? "light"
-        : "dark";
+      theme === "dark" ? "light" : "dark";
 
     setTheme(newTheme);
 
@@ -66,15 +89,15 @@ export default function Home() {
     );
   };
 
-  /* =========================
-     FILE SIZE
-  ========================= */
+  /*
+   * =========================================
+   * FILE SIZE
+   * =========================================
+   */
 
   const formatFileSize = (bytes) => {
     if (bytes < 1024 * 1024) {
-      return `${(
-        bytes / 1024
-      ).toFixed(1)} KB`;
+      return `${(bytes / 1024).toFixed(1)} KB`;
     }
 
     return `${(
@@ -83,133 +106,126 @@ export default function Home() {
     ).toFixed(2)} MB`;
   };
 
-  /* =========================
-     COUNTDOWN
-  ========================= */
+  /*
+   * =========================================
+   * TIMER
+   * =========================================
+   */
 
-  const getRemainingTime = () => {
+  useEffect(() => {
     if (!expiresAt) {
-      return "";
+      setRemainingSeconds(0);
+      return;
     }
 
-    const remaining = Math.max(
-      0,
-      new Date(expiresAt).getTime() -
-        Date.now()
-    );
+    const updateTimer = () => {
+      const remaining = Math.max(
+        0,
+        new Date(expiresAt).getTime() -
+          Date.now()
+      );
 
-    const totalSeconds =
-      Math.floor(
+      const seconds = Math.ceil(
         remaining / 1000
       );
 
-    const minutes =
-      Math.floor(
-        totalSeconds / 60
-      );
+      setRemainingSeconds(seconds);
+
+      if (seconds <= 0) {
+        setTransferCode("");
+        setExpiresAt(null);
+
+        setMessage(
+          "Transfer expired. The file has been deleted."
+        );
+      }
+    };
+
+    updateTimer();
+
+    const interval = setInterval(
+      updateTimer,
+      1000
+    );
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [expiresAt]);
+
+  const formatTime = () => {
+    const minutes = Math.floor(
+      remainingSeconds / 60
+    );
 
     const seconds =
-      totalSeconds % 60;
+      remainingSeconds % 60;
 
-    return `${String(
-      minutes
-    ).padStart(
+    return `${String(minutes).padStart(
       2,
       "0"
-    )}:${String(
-      seconds
-    ).padStart(
+    )}:${String(seconds).padStart(
       2,
       "0"
     )}`;
   };
 
-  useEffect(() => {
-    if (!expiresAt) {
-      return;
-    }
+  /*
+   * =========================================
+   * FILE SELECT
+   * =========================================
+   */
 
-    const timer =
-      setInterval(() => {
-        if (
-          Date.now() >=
-          new Date(
-            expiresAt
-          ).getTime()
-        ) {
-          setExpiresAt(null);
-          setTransferCode("");
-
-          setMessage(
-            "This transfer has expired."
-          );
-        }
-      }, 1000);
-
-    return () =>
-      clearInterval(timer);
-  }, [expiresAt]);
-
-  /* =========================
-     SELECT FILE
-  ========================= */
-
-  const chooseFile = (event) => {
+  const handleFileSelect = (event) => {
     setError("");
     setMessage("");
 
-    const selectedFile =
+    const selected =
       event.target.files?.[0];
 
-    if (!selectedFile) {
+    if (!selected) {
       return;
     }
 
     if (
-      selectedFile.size >
+      selected.size >
       MAX_FILE_SIZE
     ) {
       setFile(null);
 
-      if (
-        fileInputRef.current
-      ) {
-        fileInputRef.current.value =
-          "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
 
       setError(
-        "File size must be 50 MB or less."
+        "Maximum file size is 50 MB."
       );
 
       return;
     }
 
-    setFile(selectedFile);
+    setFile(selected);
   };
 
-  /* =========================
-     UPLOAD
-  ========================= */
+  /*
+   * =========================================
+   * UPLOAD
+   * =========================================
+   */
 
   const uploadFile = async () => {
-    if (
-      !file ||
-      uploading
-    ) {
+    if (!file || uploading) {
       return;
     }
 
+    setUploading(true);
     setError("");
     setMessage("");
-    setUploading(true);
 
     try {
       /*
-        STEP 1
-        Ask Supabase backend
-        to create transfer
-      */
+       * 1. CREATE TRANSFER
+       */
 
       const initResponse =
         await fetch(
@@ -223,14 +239,11 @@ export default function Home() {
             },
 
             body: JSON.stringify({
-              action:
-                "init-upload",
+              action: "init-upload",
 
-              fileName:
-                file.name,
+              fileName: file.name,
 
-              fileSize:
-                file.size,
+              fileSize: file.size,
 
               mimeType:
                 file.type ||
@@ -242,29 +255,22 @@ export default function Home() {
       const initData =
         await initResponse.json();
 
-      if (
-        !initResponse.ok
-      ) {
+      if (!initResponse.ok) {
         throw new Error(
           initData.error ||
-            "Unable to prepare upload."
+            "Unable to create transfer."
         );
       }
 
       /*
-        STEP 2
-        Direct upload to
-        Supabase Storage
-      */
+       * 2. UPLOAD DIRECTLY TO SUPABASE
+       */
 
       const {
-        error:
-          uploadError,
+        error: uploadError,
       } =
         await supabase.storage
-          .from(
-            "temporary-files"
-          )
+          .from("temporary-files")
           .uploadToSignedUrl(
             initData.path,
             initData.token,
@@ -276,9 +282,8 @@ export default function Home() {
       }
 
       /*
-        STEP 3
-        Activate transfer
-      */
+       * 3. ACTIVATE TRANSFER
+       */
 
       const activateResponse =
         await fetch(
@@ -304,14 +309,16 @@ export default function Home() {
       const activateData =
         await activateResponse.json();
 
-      if (
-        !activateResponse.ok
-      ) {
+      if (!activateResponse.ok) {
         throw new Error(
           activateData.error ||
-            "Unable to finish upload."
+            "Unable to activate transfer."
         );
       }
+
+      /*
+       * 4. SHOW CODE
+       */
 
       setTransferCode(
         initData.code
@@ -319,6 +326,10 @@ export default function Home() {
 
       setExpiresAt(
         initData.expiresAt
+      );
+
+      setRemainingSeconds(
+        TRANSFER_SECONDS
       );
 
       setMessage(
@@ -334,34 +345,42 @@ export default function Home() {
 
       setTransferCode("");
       setExpiresAt(null);
+      setRemainingSeconds(0);
     } finally {
       setUploading(false);
     }
   };
 
-  /* =========================
-     DOWNLOAD
-  ========================= */
+  /*
+   * =========================================
+   * DOWNLOAD
+   * =========================================
+   */
 
-  const downloadFile = async () => {
+  const downloadFile = async (
+    suppliedCode = ""
+  ) => {
+    const code =
+      suppliedCode ||
+      receiveCode;
+
     if (
-      receiveCode.length !== 5 ||
+      !/^\d{5}$/.test(code) ||
       downloading
     ) {
       return;
     }
 
+    setDownloading(true);
     setError("");
     setMessage("");
-    setDownloading(true);
 
     try {
       /*
-        STEP 1
-        Verify code
-      */
+       * 1. CLAIM FILE
+       */
 
-      const prepareResponse =
+      const response =
         await fetch(
           FUNCTION_URL,
           {
@@ -376,40 +395,31 @@ export default function Home() {
               action:
                 "prepare-download",
 
-              code:
-                receiveCode,
+              code,
             }),
           }
         );
 
-      const prepareData =
-        await prepareResponse.json();
+      const data =
+        await response.json();
 
-      if (
-        !prepareResponse.ok
-      ) {
+      if (!response.ok) {
         throw new Error(
-          prepareData.error ||
+          data.error ||
             "File not found."
         );
       }
 
       /*
-        STEP 2
-        Download from
-        signed URL
-      */
+       * 2. DOWNLOAD FILE
+       */
 
       const fileResponse =
-        await fetch(
-          prepareData.url
-        );
+        await fetch(data.url);
 
-      if (
-        !fileResponse.ok
-      ) {
+      if (!fileResponse.ok) {
         throw new Error(
-          "Unable to download the file."
+          "Unable to download file."
         );
       }
 
@@ -417,44 +427,32 @@ export default function Home() {
         await fileResponse.blob();
 
       /*
-        STEP 3
-        Trigger browser
-        download
-      */
+       * 3. BROWSER DOWNLOAD
+       */
 
       const blobUrl =
-        URL.createObjectURL(
-          blob
-        );
+        URL.createObjectURL(blob);
 
       const link =
-        document.createElement(
-          "a"
-        );
+        document.createElement("a");
 
-      link.href =
-        blobUrl;
+      link.href = blobUrl;
 
       link.download =
-        prepareData.fileName ||
-        "download";
+        data.fileName ||
+        "HoneyShare-file";
 
-      document.body.appendChild(
-        link
-      );
+      document.body.appendChild(link);
 
       link.click();
 
       link.remove();
 
-      URL.revokeObjectURL(
-        blobUrl
-      );
+      URL.revokeObjectURL(blobUrl);
 
       /*
-        STEP 4
-        Delete transfer
-      */
+       * 4. DELETE FROM SERVER
+       */
 
       await fetch(
         FUNCTION_URL,
@@ -470,59 +468,127 @@ export default function Home() {
             action:
               "complete-download",
 
-            id:
-              prepareData.id,
+            id: data.id,
           }),
         }
       );
 
-      setMessage(
-        "Download complete. File deleted."
-      );
-
       setReceiveCode("");
+
+      setMessage(
+        "Download complete. File deleted automatically."
+      );
     } catch (err) {
       console.error(err);
 
       setError(
         err?.message ||
-          "Download failed. Please try again."
+          "Download failed."
       );
     } finally {
       setDownloading(false);
     }
   };
 
-  /* =========================
-     RESET
-  ========================= */
+  /*
+   * =========================================
+   * QR AUTO DOWNLOAD
+   * =========================================
+   */
+
+  useEffect(() => {
+    if (
+      qrAttempted.current
+    ) {
+      return;
+    }
+
+    const params =
+      new URLSearchParams(
+        window.location.search
+      );
+
+    const code =
+      params.get("code");
+
+    if (
+      code &&
+      /^\d{5}$/.test(code)
+    ) {
+      qrAttempted.current = true;
+
+      setReceiveCode(code);
+
+      setMessage(
+        "QR transfer found. Starting download..."
+      );
+
+      const timer =
+        setTimeout(() => {
+          downloadFile(code);
+        }, 800);
+
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+  }, []);
+
+  /*
+   * =========================================
+   * RESET
+   * =========================================
+   */
 
   const resetUpload = () => {
     setFile(null);
+
     setTransferCode("");
+
     setExpiresAt(null);
+
+    setRemainingSeconds(0);
+
     setMessage("");
+
     setError("");
 
-    if (
-      fileInputRef.current
-    ) {
-      fileInputRef.current.value =
-        "";
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
-  /* =========================
-     UI
-  ========================= */
+  /*
+   * =========================================
+   * QR
+   * =========================================
+   */
+
+  const qrUrl =
+    origin && transferCode
+      ? `${origin}/?code=${transferCode}`
+      : "";
+
+  const qrImage =
+    qrUrl
+      ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&data=${encodeURIComponent(
+          qrUrl
+        )}`
+      : "";
+
+  /*
+   * =========================================
+   * UI
+   * =========================================
+   */
 
   return (
     <main
       className={`page ${theme}`}
     >
-      <div className="background-glow glow-one"></div>
+      <div className="background-glow glow-one" />
 
-      <div className="background-glow glow-two"></div>
+      <div className="background-glow glow-two" />
 
       <section className="container">
 
@@ -549,14 +615,11 @@ export default function Home() {
           </div>
 
           <button
+            type="button"
             className="theme-toggle"
-            onClick={
-              toggleTheme
-            }
-            aria-label="Toggle theme"
+            onClick={toggleTheme}
           >
-            {theme ===
-            "dark"
+            {theme === "dark"
               ? "☀️"
               : "🌙"}
           </button>
@@ -565,7 +628,7 @@ export default function Home() {
 
         {/* HERO */}
 
-        <div className="hero">
+        <section className="hero">
 
           <span className="badge">
             NO ACCOUNT REQUIRED
@@ -582,7 +645,7 @@ export default function Home() {
             after the transfer.
           </p>
 
-        </div>
+        </section>
 
         {/* TRANSFER */}
 
@@ -590,7 +653,7 @@ export default function Home() {
 
           {/* SEND */}
 
-          <div className="card send-card">
+          <section className="card send-card">
 
             <div className="card-top">
 
@@ -615,18 +678,15 @@ export default function Home() {
             {!transferCode ? (
 
               <>
-
                 <label className="drop-zone">
 
                   <input
-                    ref={
-                      fileInputRef
-                    }
+                    ref={fileInputRef}
                     type="file"
-                    onChange={
-                      chooseFile
-                    }
                     hidden
+                    onChange={
+                      handleFileSelect
+                    }
                   />
 
                   <div className="drop-icon">
@@ -640,9 +700,7 @@ export default function Home() {
                           file.name
                         }
                       >
-                        {
-                          file.name
-                        }
+                        {file.name}
                       </strong>
 
                       <span>
@@ -670,31 +728,28 @@ export default function Home() {
                 </label>
 
                 {uploading && (
-
                   <div className="uploading-state">
 
-                    <span className="upload-spinner"></span>
+                    <span className="upload-spinner" />
 
                     <span>
                       Uploading file...
                     </span>
 
                   </div>
-
                 )}
 
                 <button
+                  type="button"
                   className="primary-button"
                   disabled={
                     !file ||
                     uploading
                   }
-                  type="button"
                   onClick={
                     uploadFile
                   }
                 >
-
                   {uploading
                     ? "Uploading..."
                     : "Upload File"}
@@ -704,14 +759,10 @@ export default function Home() {
                       →
                     </span>
                   )}
-
                 </button>
-
               </>
 
             ) : (
-
-              /* SUCCESS */
 
               <div className="success-area">
 
@@ -721,74 +772,103 @@ export default function Home() {
                     ✓
                   </span>
 
-                  <span>
-                    Uploaded
-                  </span>
+                  Uploaded
 
                 </div>
 
-                <div className="file-info">
+                <div className="success-content">
 
-                  <span className="file-label">
-                    FILE
-                  </span>
+                  <div className="code-success">
 
-                  <span
-                    className="file-name"
-                    title={
-                      file?.name
-                    }
-                  >
-                    {file?.name}
-                  </span>
+                    <div className="file-info">
+
+                      <span className="file-label">
+                        FILE
+                      </span>
+
+                      <span
+                        className="file-name"
+                        title={
+                          file?.name
+                        }
+                      >
+                        {file?.name}
+                      </span>
+
+                    </div>
+
+                    <span className="code-label">
+                      YOUR TRANSFER CODE
+                    </span>
+
+                    <div className="transfer-code-box">
+
+                      <span className="transfer-code">
+                        {
+                          transferCode
+                        }
+                      </span>
+
+                    </div>
+
+                    <div className="expiry">
+
+                      Expires in{" "}
+
+                      <strong>
+                        {
+                          formatTime()
+                        }
+                      </strong>
+
+                    </div>
+
+                    <button
+                      type="button"
+                      className="reset-button"
+                      onClick={
+                        resetUpload
+                      }
+                    >
+                      Send another file
+                    </button>
+
+                  </div>
+
+                  <div className="qr-section">
+
+                    <span className="qr-label">
+                      SCAN TO DOWNLOAD
+                    </span>
+
+                    <div className="qr-box">
+
+                      {qrImage && (
+                        <img
+                          src={qrImage}
+                          alt="HoneyShare download QR code"
+                        />
+                      )}
+
+                    </div>
+
+                    <span className="qr-hint">
+                      Scan with phone camera
+                    </span>
+
+                  </div>
 
                 </div>
-
-                <span className="code-label">
-                  YOUR TRANSFER CODE
-                </span>
-
-                <div className="transfer-code-box">
-
-                  <span className="transfer-code">
-                    {
-                      transferCode
-                    }
-                  </span>
-
-                </div>
-
-                <div className="expiry">
-
-                  Expires in{" "}
-
-                  <strong>
-                    {
-                      getRemainingTime()
-                    }
-                  </strong>
-
-                </div>
-
-                <button
-                  className="reset-button"
-                  type="button"
-                  onClick={
-                    resetUpload
-                  }
-                >
-                  Send another file
-                </button>
 
               </div>
 
             )}
 
-          </div>
+          </section>
 
           {/* RECEIVE */}
 
-          <div className="card receive-card">
+          <section className="card receive-card">
 
             <div className="card-top">
 
@@ -826,10 +906,7 @@ export default function Home() {
                 value={
                   receiveCode
                 }
-                onChange={(
-                  event
-                ) => {
-
+                onChange={(event) => {
                   setError("");
                   setMessage("");
 
@@ -844,7 +921,6 @@ export default function Home() {
                         5
                       )
                   );
-
                 }}
               />
 
@@ -855,15 +931,14 @@ export default function Home() {
             </div>
 
             <button
-              className="secondary-button"
               type="button"
+              className="secondary-button"
               disabled={
-                receiveCode.length !==
-                  5 ||
+                receiveCode.length !== 5 ||
                 downloading
               }
-              onClick={
-                downloadFile
+              onClick={() =>
+                downloadFile()
               }
             >
 
@@ -877,15 +952,13 @@ export default function Home() {
 
             </button>
 
-          </div>
+          </section>
 
         </div>
 
         {/* STATUS */}
 
-        {(message ||
-          error) && (
-
+        {(message || error) && (
           <div
             className={`status-message ${
               error
@@ -893,12 +966,8 @@ export default function Home() {
                 : "success"
             }`}
           >
-            {
-              error ||
-              message
-            }
+            {error || message}
           </div>
-
         )}
 
         {/* FEATURES */}
@@ -910,9 +979,7 @@ export default function Home() {
               ⚡
             </span>
 
-            <span>
-              Quick transfer
-            </span>
+            Quick transfer
           </div>
 
           <div>
@@ -920,9 +987,7 @@ export default function Home() {
               🔒
             </span>
 
-            <span>
-              Private files
-            </span>
+            Private files
           </div>
 
           <div>
@@ -930,9 +995,7 @@ export default function Home() {
               ⌛
             </span>
 
-            <span>
-              Auto deleted
-            </span>
+            Auto deleted
           </div>
 
         </div>
@@ -945,9 +1008,7 @@ export default function Home() {
             HoneyShare
           </span>
 
-          <span>
-            •
-          </span>
+          <span>•</span>
 
           <a
             href="https://github.com/honey-share"
@@ -957,9 +1018,7 @@ export default function Home() {
             GitHub
           </a>
 
-          <span>
-            •
-          </span>
+          <span>•</span>
 
           <span>
             Temporary file sharing
