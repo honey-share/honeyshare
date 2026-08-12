@@ -10,14 +10,9 @@ body {
 }
 
 body {
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  font-family: var(--font-manrope), Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 button,
@@ -29,35 +24,27 @@ button {
   cursor: pointer;
 }
 
-/* =========================================
+/* =========================
    PAGE
-========================================= */
+========================= */
 
 .page {
   --bg: #090e1d;
   --text: #f8f9ff;
-  --muted: #a8b0c5;
-  --muted-2: #707b97;
-
-  --card: rgba(20, 28, 50, 0.94);
-
-  --border: #2a3554;
-
+  --muted: #aab3c9;
+  --muted-2: #7f8aa4;
+  --card: rgba(20, 28, 50, 0.95);
+  --border: #2d3857;
   --input: #0c1428;
-  --input-border: #3a4667;
-
+  --input-border: #3c4869;
   --secondary: #1b2540;
-
   --primary-button: #ffffff;
   --primary-text: #101526;
 
   position: relative;
-
   width: 100%;
   height: 100svh;
-
   min-height: 680px;
-
   overflow: hidden;
 
   background: var(--bg);
@@ -73,32 +60,27 @@ button {
     color 0.3s ease;
 }
 
-/* =========================================
+/* =========================
    LIGHT MODE
-========================================= */
+========================= */
 
 .page.light {
   --bg: #f3f5fa;
   --text: #111827;
-  --muted: #5e6a82;
-  --muted-2: #7b879c;
-
-  --card: rgba(255, 255, 255, 0.96);
-
-  --border: #d8dfec;
-
+  --muted: #5f6b83;
+  --muted-2: #77839a;
+  --card: rgba(255, 255, 255, 0.97);
+  --border: #d6deec;
   --input: #f7f9fd;
-  --input-border: #c8d1e2;
-
+  --input-border: #c7d1e3;
   --secondary: #edf1f7;
-
   --primary-button: #111827;
   --primary-text: #ffffff;
 }
 
-/* =========================================
+/* =========================
    BACKGROUND
-========================================= */
+========================= */
 
 .background-glow {
   position: fixed;
@@ -108,62 +90,56 @@ button {
 
   border-radius: 50%;
 
-  filter: blur(110px);
+  filter: blur(115px);
 
   pointer-events: none;
 
   z-index: 0;
 
-  opacity: 0.25;
+  opacity: 0.24;
 }
 
 .glow-one {
   background: #6253d9;
-
   top: -230px;
   left: -150px;
 }
 
 .glow-two {
   background: #00a98f;
-
-  bottom: -240px;
   right: -150px;
+  bottom: -240px;
 }
 
 .page.light .glow-one {
-  opacity: 0.08;
+  opacity: 0.07;
 }
 
 .page.light .glow-two {
-  opacity: 0.06;
+  opacity: 0.055;
 }
 
-/* =========================================
+/* =========================
    CONTAINER
-========================================= */
+========================= */
 
 .container {
   position: relative;
-
   z-index: 1;
 
   width: min(1100px, 100%);
-
   max-height: 100%;
 
   margin: 0 auto;
 }
 
-/* =========================================
+/* =========================
    HEADER
-========================================= */
+========================= */
 
 .header {
   display: flex;
-
   align-items: center;
-
   justify-content: space-between;
 
   margin-bottom: 19px;
@@ -171,121 +147,131 @@ button {
 
 .brand {
   display: flex;
-
   align-items: center;
-
   gap: 13px;
 }
 
 .logo-mark {
-  width: 48px;
-  height: 48px;
+  width: 50px;
+  height: 50px;
 
-  border-radius: 14px;
+  flex-shrink: 0;
+
+  border-radius: 15px;
 
   display: grid;
-
   place-items: center;
 
   background: var(--primary-button);
-
   color: var(--primary-text);
 
-  font-size: 23px;
+  font-family: var(--font-space), sans-serif;
 
-  font-weight: 850;
+  font-size: 24px;
+  font-weight: 700;
+
+  letter-spacing: -1px;
 }
 
 .header h1 {
   margin: 0;
 
-  font-size: 22px;
+  font-family: var(--font-space), sans-serif;
 
-  line-height: 1.1;
+  font-size: 23px;
+  line-height: 1.05;
 
-  letter-spacing: -0.6px;
+  letter-spacing: -0.7px;
+
+  font-weight: 700;
 }
 
 .header p {
-  margin: 4px 0 0;
+  margin: 5px 0 0;
 
   color: var(--muted);
 
   font-size: 12px;
+  line-height: 1;
+
+  font-weight: 500;
 }
 
-/* =========================================
+/* =========================
    THEME
-========================================= */
+========================= */
 
 .theme-toggle {
-  width: 45px;
-  height: 45px;
+  width: 46px;
+  height: 46px;
 
   border-radius: 14px;
 
   border: 1px solid var(--border);
 
   background: var(--card);
-
   color: var(--text);
 
   display: grid;
-
   place-items: center;
 
   font-size: 18px;
 
   transition:
-    transform 0.2s ease;
+    transform 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .theme-toggle:hover {
   transform: translateY(-2px);
+  border-color: #7164d6;
 }
 
-/* =========================================
+/* =========================
    HERO
-========================================= */
+========================= */
 
 .hero {
-  max-width: 760px;
-
+  max-width: 800px;
   margin-bottom: 20px;
 }
 
 .badge {
   display: inline-flex;
-
   align-items: center;
 
   border: 1px solid var(--border);
 
   color: var(--muted);
 
-  padding: 7px 12px;
+  padding: 7px 13px;
 
   border-radius: 999px;
 
-  font-size: 10px;
+  font-family: var(--font-space), sans-serif;
 
-  font-weight: 800;
+  font-size: 11px;
+  line-height: 1;
 
-  letter-spacing: 1.2px;
+  font-weight: 700;
 
-  margin-bottom: 10px;
+  letter-spacing: 1.25px;
+
+  margin-bottom: 11px;
 }
 
 .hero h2 {
-  font-size: clamp(48px, 5vw, 64px);
+  margin: 0 0 13px;
+
+  font-family: var(--font-space), sans-serif;
+
+  font-size: clamp(52px, 5vw, 68px);
 
   line-height: 0.98;
 
-  letter-spacing: -3.5px;
+  letter-spacing: -3.6px;
 
-  margin: 0 0 12px;
-
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .hero p {
@@ -293,16 +279,18 @@ button {
 
   line-height: 1.55;
 
-  font-size: 14px;
+  font-size: 15px;
 
-  max-width: 700px;
+  font-weight: 500;
+
+  max-width: 720px;
 
   margin: 0;
 }
 
-/* =========================================
+/* =========================
    GRID
-========================================= */
+========================= */
 
 .transfer-grid {
   display: grid;
@@ -314,9 +302,9 @@ button {
   gap: 18px;
 }
 
-/* =========================================
+/* =========================
    CARD
-========================================= */
+========================= */
 
 .card {
   background: var(--card);
@@ -325,7 +313,7 @@ button {
 
   border-radius: 24px;
 
-  padding: 21px;
+  padding: 22px;
 
   backdrop-filter: blur(20px);
 
@@ -340,9 +328,7 @@ button {
 
 .card-top {
   display: flex;
-
   justify-content: space-between;
-
   align-items: flex-start;
 
   margin-bottom: 15px;
@@ -353,57 +339,66 @@ button {
 
   color: var(--muted);
 
-  font-size: 10px;
+  font-family: var(--font-space), sans-serif;
 
-  font-weight: 850;
+  font-size: 11px;
+  line-height: 1;
 
-  letter-spacing: 1.8px;
+  font-weight: 700;
 
-  margin-bottom: 6px;
+  letter-spacing: 1.7px;
+
+  margin-bottom: 7px;
 }
 
 .card h3 {
   margin: 0;
 
-  font-size: 25px;
+  font-family: var(--font-space), sans-serif;
 
-  line-height: 1.1;
+  font-size: 28px;
 
-  letter-spacing: -0.8px;
+  line-height: 1.08;
 
-  font-weight: 800;
-}
-
-.icon-circle {
-  width: 44px;
-  height: 44px;
-
-  border-radius: 14px;
-
-  display: grid;
-
-  place-items: center;
-
-  font-size: 23px;
+  letter-spacing: -1px;
 
   font-weight: 700;
 }
 
+/* =========================
+   ICONS
+========================= */
+
+.icon-circle {
+  width: 46px;
+  height: 46px;
+
+  flex-shrink: 0;
+
+  border-radius: 14px;
+
+  display: grid;
+  place-items: center;
+
+  font-family: var(--font-space), sans-serif;
+
+  font-size: 24px;
+  font-weight: 600;
+}
+
 .upload-icon {
   background: #e8ddff;
-
   color: #6246c7;
 }
 
 .download-icon {
   background: #d6fff2;
-
   color: #00876d;
 }
 
-/* =========================================
+/* =========================
    DROP ZONE
-========================================= */
+========================= */
 
 .drop-zone {
   min-height: 175px;
@@ -454,28 +449,34 @@ button {
   border-radius: 14px;
 
   display: grid;
-
   place-items: center;
 
   background: #222c49;
 
   color: #c9c2ff;
 
-  font-size: 25px;
+  font-family: var(--font-space), sans-serif;
 
-  margin-bottom: 11px;
+  font-size: 26px;
+
+  margin-bottom: 12px;
 }
 
 .page.light .drop-icon {
   background: #edf0ff;
-
   color: #6655c9;
 }
 
 .drop-zone strong {
-  font-size: 15px;
+  font-family: var(--font-space), sans-serif;
 
-  margin-bottom: 5px;
+  font-size: 16px;
+
+  line-height: 1.2;
+
+  font-weight: 600;
+
+  margin-bottom: 6px;
 
   max-width: 85%;
 
@@ -489,7 +490,11 @@ button {
 .drop-zone span {
   color: var(--muted);
 
-  font-size: 12px;
+  font-size: 13px;
+
+  line-height: 1.3;
+
+  font-weight: 500;
 
   max-width: 90%;
 
@@ -501,22 +506,24 @@ button {
 }
 
 .drop-zone small {
-  margin-top: 12px;
+  margin-top: 13px;
 
   color: var(--muted-2);
 
-  font-size: 10px;
+  font-size: 12px;
+
+  font-weight: 500;
 }
 
-/* =========================================
+/* =========================
    BUTTONS
-========================================= */
+========================= */
 
 .primary-button,
 .secondary-button {
   width: 100%;
 
-  height: 52px;
+  height: 54px;
 
   border: 0;
 
@@ -532,18 +539,20 @@ button {
 
   gap: 12px;
 
-  font-weight: 750;
+  font-family: var(--font-space), sans-serif;
 
-  font-size: 14px;
+  font-weight: 700;
+
+  font-size: 15px;
 
   transition:
     transform 0.2s ease,
-    opacity 0.2s ease;
+    opacity 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .primary-button {
   background: var(--primary-button);
-
   color: var(--primary-text);
 }
 
@@ -554,7 +563,6 @@ button {
 .primary-button:disabled,
 .secondary-button:disabled {
   opacity: 0.35;
-
   cursor: not-allowed;
 }
 
@@ -563,17 +571,18 @@ button {
 
   color: var(--text);
 
-  border:
-    1px solid var(--border);
+  border: 1px solid var(--border);
 }
 
 .secondary-button:hover:not(:disabled) {
   transform: translateY(-2px);
+
+  border-color: #596685;
 }
 
-/* =========================================
+/* =========================
    RECEIVE
-========================================= */
+========================= */
 
 .code-area {
   min-height: 175px;
@@ -588,7 +597,11 @@ button {
 .code-area label {
   color: var(--muted);
 
-  font-size: 12px;
+  font-size: 13px;
+
+  line-height: 1.3;
+
+  font-weight: 500;
 
   margin-bottom: 9px;
 }
@@ -596,10 +609,9 @@ button {
 .code-area input {
   width: 100%;
 
-  height: 66px;
+  height: 68px;
 
-  border:
-    1px solid var(--input-border);
+  border: 1px solid var(--input-border);
 
   background: var(--input);
 
@@ -613,9 +625,11 @@ button {
 
   text-align: center;
 
-  font-size: 29px;
+  font-family: var(--font-space), sans-serif;
 
-  font-weight: 800;
+  font-size: 31px;
+
+  font-weight: 700;
 
   letter-spacing: 9px;
 
@@ -628,29 +642,31 @@ button {
   border-color: #8b7cf6;
 
   box-shadow:
-    0 0 0 3px
-    rgba(139, 124, 246, 0.1);
+    0 0 0 3px rgba(139, 124, 246, 0.1);
 }
 
 .code-area input::placeholder {
   color: var(--muted-2);
-
   opacity: 0.55;
 }
 
 .code-hint {
   color: var(--muted-2);
 
-  font-size: 10px;
+  font-size: 11px;
+
+  line-height: 1.3;
+
+  font-weight: 500;
 
   margin-top: 10px;
 
   text-align: center;
 }
 
-/* =========================================
+/* =========================
    UPLOAD
-========================================= */
+========================= */
 
 .uploading-state {
   width: 100%;
@@ -667,15 +683,16 @@ button {
 
   color: var(--muted);
 
-  font-size: 11px;
+  font-size: 12px;
+
+  font-weight: 500;
 }
 
 .upload-spinner {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
 
-  border:
-    2px solid var(--border);
+  border: 2px solid var(--border);
 
   border-top-color: #8b7cf6;
 
@@ -691,9 +708,9 @@ button {
   }
 }
 
-/* =========================================
+/* =========================
    SUCCESS
-========================================= */
+========================= */
 
 .success-area {
   min-height: 335px;
@@ -714,9 +731,9 @@ button {
 
   align-items: center;
 
-  gap: 7px;
+  gap: 8px;
 
-  padding: 7px 12px;
+  padding: 8px 13px;
 
   border-radius: 999px;
 
@@ -725,20 +742,22 @@ button {
 
   color: #00b58d;
 
-  font-size: 11px;
+  font-family: var(--font-space), sans-serif;
 
-  font-weight: 850;
+  font-size: 12px;
+
+  font-weight: 700;
 
   text-transform: uppercase;
 
   letter-spacing: 1px;
 
-  margin-bottom: 14px;
+  margin-bottom: 15px;
 }
 
 .uploaded-check {
-  width: 18px;
-  height: 18px;
+  width: 19px;
+  height: 19px;
 
   display: grid;
 
@@ -753,9 +772,9 @@ button {
   font-size: 11px;
 }
 
-/* =========================================
+/* =========================
    SUCCESS CONTENT
-========================================= */
+========================= */
 
 .success-content {
   width: 100%;
@@ -788,7 +807,7 @@ button {
 
   align-items: center;
 
-  gap: 4px;
+  gap: 5px;
 
   margin-bottom: 14px;
 }
@@ -798,9 +817,13 @@ button {
 .qr-label {
   color: var(--muted-2);
 
-  font-size: 9px;
+  font-family: var(--font-space), sans-serif;
 
-  font-weight: 850;
+  font-size: 10px;
+
+  line-height: 1;
+
+  font-weight: 700;
 
   letter-spacing: 1.6px;
 }
@@ -810,9 +833,13 @@ button {
 
   color: var(--muted);
 
-  font-size: 11px;
+  font-family: var(--font-manrope), sans-serif;
 
-  font-weight: 550;
+  font-size: 13px;
+
+  line-height: 1.3;
+
+  font-weight: 600;
 
   overflow: hidden;
 
@@ -821,12 +848,12 @@ button {
   white-space: nowrap;
 }
 
-/* =========================================
+/* =========================
    TRANSFER CODE
-========================================= */
+========================= */
 
 .code-label {
-  margin-bottom: 8px;
+  margin-bottom: 9px;
 }
 
 .transfer-code-box {
@@ -834,7 +861,7 @@ button {
 
   max-width: 100%;
 
-  height: 73px;
+  height: 74px;
 
   display: flex;
 
@@ -844,8 +871,7 @@ button {
 
   border-radius: 17px;
 
-  border:
-    1px solid var(--border);
+  border: 1px solid var(--border);
 
   background: var(--input);
 }
@@ -853,22 +879,27 @@ button {
 .transfer-code {
   color: var(--text);
 
-  font-size: 36px;
+  font-family: var(--font-space), sans-serif;
 
-  font-weight: 850;
+  font-size: 37px;
+
+  font-weight: 700;
 
   letter-spacing: 9px;
 
   padding-left: 9px;
 
-  font-variant-numeric:
-    tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
 
 .expiry {
   color: var(--muted);
 
-  font-size: 10px;
+  font-size: 12px;
+
+  line-height: 1.3;
+
+  font-weight: 500;
 
   margin-top: 10px;
 }
@@ -876,8 +907,11 @@ button {
 .expiry strong {
   color: var(--text);
 
-  font-variant-numeric:
-    tabular-nums;
+  font-family: var(--font-space), sans-serif;
+
+  font-weight: 700;
+
+  font-variant-numeric: tabular-nums;
 }
 
 .reset-button {
@@ -887,16 +921,24 @@ button {
 
   color: var(--muted);
 
-  font-size: 10px;
+  font-size: 11px;
+
+  font-weight: 600;
 
   margin-top: 10px;
 
   text-decoration: underline;
+
+  text-underline-offset: 3px;
 }
 
-/* =========================================
+.reset-button:hover {
+  color: var(--text);
+}
+
+/* =========================
    QR
-========================================= */
+========================= */
 
 .qr-section {
   display: flex;
@@ -914,7 +956,6 @@ button {
 
 .qr-box {
   width: 178px;
-
   height: 178px;
 
   padding: 5px;
@@ -928,8 +969,7 @@ button {
   place-items: center;
 
   box-shadow:
-    0 10px 30px
-    rgba(0, 0, 0, 0.16);
+    0 10px 30px rgba(0, 0, 0, 0.16);
 }
 
 .qr-box canvas {
@@ -940,34 +980,43 @@ button {
   height: 168px !important;
 
   max-width: 100%;
-
   max-height: 100%;
 }
 
 .qr-hint {
   color: var(--muted);
 
-  font-size: 9px;
+  font-size: 11px;
 
-  margin-top: 8px;
+  line-height: 1.3;
+
+  font-weight: 500;
+
+  margin-top: 9px;
+
+  text-align: center;
 }
 
-/* =========================================
+/* =========================
    STATUS
-========================================= */
+========================= */
 
 .status-message {
   width: 100%;
 
   margin-top: 10px;
 
-  padding: 10px 14px;
+  padding: 11px 15px;
 
   border-radius: 11px;
 
   text-align: center;
 
-  font-size: 11px;
+  font-size: 13px;
+
+  line-height: 1.35;
+
+  font-weight: 600;
 }
 
 .status-message.success {
@@ -975,8 +1024,7 @@ button {
     rgba(0, 190, 150, 0.08);
 
   border:
-    1px solid
-    rgba(0, 190, 150, 0.2);
+    1px solid rgba(0, 190, 150, 0.2);
 
   color: #00b58d;
 }
@@ -986,28 +1034,31 @@ button {
     rgba(240, 80, 90, 0.08);
 
   border:
-    1px solid
-    rgba(240, 80, 90, 0.2);
+    1px solid rgba(240, 80, 90, 0.2);
 
   color: #e66a73;
 }
 
-/* =========================================
+/* =========================
    INFO
-========================================= */
+========================= */
 
 .info-row {
   display: flex;
 
   justify-content: center;
 
-  gap: 42px;
+  gap: 44px;
 
-  margin: 13px 0 9px;
+  margin: 14px 0 10px;
 
   color: var(--muted);
 
-  font-size: 11px;
+  font-size: 13px;
+
+  line-height: 1;
+
+  font-weight: 600;
 }
 
 .info-row div {
@@ -1015,16 +1066,16 @@ button {
 
   align-items: center;
 
-  gap: 7px;
+  gap: 8px;
 }
 
 .info-icon {
-  font-size: 13px;
+  font-size: 14px;
 }
 
-/* =========================================
+/* =========================
    FOOTER
-========================================= */
+========================= */
 
 footer {
   display: flex;
@@ -1037,28 +1088,36 @@ footer {
 
   color: var(--muted-2);
 
-  font-size: 10px;
+  font-size: 12px;
+
+  line-height: 1.3;
+
+  font-weight: 500;
 }
 
 footer span:first-child {
   color: var(--muted);
 
-  font-weight: 750;
+  font-family: var(--font-space), sans-serif;
+
+  font-weight: 700;
 }
 
 footer a {
   color: inherit;
 
   text-decoration: none;
+
+  transition: color 0.2s ease;
 }
 
 footer a:hover {
   color: var(--text);
 }
 
-/* =========================================
+/* =========================
    SHORT DESKTOP
-========================================= */
+========================= */
 
 @media
   (min-width: 761px)
@@ -1078,13 +1137,12 @@ footer a:hover {
   }
 
   .hero h2 {
-    font-size: 49px;
-
-    margin-bottom: 7px;
+    font-size: 52px;
+    margin-bottom: 8px;
   }
 
   .hero p {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .card {
@@ -1128,12 +1186,17 @@ footer a:hover {
 
   .info-row {
     margin-top: 8px;
+    font-size: 12px;
+  }
+
+  footer {
+    font-size: 11px;
   }
 }
 
-/* =========================================
+/* =========================
    MOBILE
-========================================= */
+========================= */
 
 @media (max-width: 760px) {
 
@@ -1144,8 +1207,7 @@ footer a:hover {
 
     overflow: visible;
 
-    padding:
-      18px 14px 24px;
+    padding: 18px 14px 24px;
   }
 
   .container {
@@ -1167,7 +1229,7 @@ footer a:hover {
   }
 
   .hero p {
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .transfer-grid {
@@ -1199,34 +1261,42 @@ footer a:hover {
 
     align-items: center;
 
-    gap: 9px;
+    gap: 11px;
 
-    margin-top: 18px;
+    margin-top: 20px;
+
+    font-size: 13px;
   }
 
   footer {
     flex-wrap: wrap;
 
     padding-bottom: 10px;
+
+    font-size: 12px;
   }
 }
 
-/* =========================================
+/* =========================
    SMALL MOBILE
-========================================= */
+========================= */
 
 @media (max-width: 380px) {
+
+  .header h1 {
+    font-size: 21px;
+  }
 
   .hero h2 {
     font-size: 37px;
   }
 
   .card h3 {
-    font-size: 22px;
+    font-size: 23px;
   }
 
   .code-area input {
-    font-size: 24px;
+    font-size: 25px;
 
     letter-spacing: 6px;
   }
@@ -1237,5 +1307,9 @@ footer a:hover {
     letter-spacing: 6px;
 
     padding-left: 6px;
+  }
+
+  .info-row {
+    font-size: 12px;
   }
 }
