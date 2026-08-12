@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { QRCodeCanvas } from "qrcode.react";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -25,37 +26,26 @@ export default function Home() {
   const [theme, setTheme] = useState("dark");
 
   const [file, setFile] = useState(null);
-
   const [uploading, setUploading] = useState(false);
 
   const [transferCode, setTransferCode] = useState("");
-
   const [expiresAt, setExpiresAt] = useState(null);
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
 
-  const [remainingSeconds, setRemainingSeconds] =
-    useState(0);
-
-  const [receiveCode, setReceiveCode] =
-    useState("");
-
-  const [downloading, setDownloading] =
-    useState(false);
+  const [receiveCode, setReceiveCode] = useState("");
+  const [downloading, setDownloading] = useState(false);
 
   const [message, setMessage] = useState("");
-
   const [error, setError] = useState("");
 
   const [origin, setOrigin] = useState("");
 
   const fileInputRef = useRef(null);
-
   const qrAttempted = useRef(false);
 
-  /*
-   * =========================================
-   * INITIAL
-   * =========================================
-   */
+  /* =========================
+     INITIAL
+  ========================= */
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -71,11 +61,9 @@ export default function Home() {
     }
   }, []);
 
-  /*
-   * =========================================
-   * THEME
-   * =========================================
-   */
+  /* =========================
+     THEME
+  ========================= */
 
   const toggleTheme = () => {
     const newTheme =
@@ -89,11 +77,9 @@ export default function Home() {
     );
   };
 
-  /*
-   * =========================================
-   * FILE SIZE
-   * =========================================
-   */
+  /* =========================
+     FILE SIZE
+  ========================= */
 
   const formatFileSize = (bytes) => {
     if (bytes < 1024 * 1024) {
@@ -106,11 +92,9 @@ export default function Home() {
     ).toFixed(2)} MB`;
   };
 
-  /*
-   * =========================================
-   * TIMER
-   * =========================================
-   */
+  /* =========================
+     TIMER
+  ========================= */
 
   useEffect(() => {
     if (!expiresAt) {
@@ -136,7 +120,7 @@ export default function Home() {
         setExpiresAt(null);
 
         setMessage(
-          "Transfer expired. The file has been deleted."
+          "Transfer expired. The file will be removed automatically."
         );
       }
     };
@@ -148,9 +132,7 @@ export default function Home() {
       1000
     );
 
-    return () => {
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, [expiresAt]);
 
   const formatTime = () => {
@@ -170,11 +152,9 @@ export default function Home() {
     )}`;
   };
 
-  /*
-   * =========================================
-   * FILE SELECT
-   * =========================================
-   */
+  /* =========================
+     SELECT FILE
+  ========================= */
 
   const handleFileSelect = (event) => {
     setError("");
@@ -183,9 +163,7 @@ export default function Home() {
     const selected =
       event.target.files?.[0];
 
-    if (!selected) {
-      return;
-    }
+    if (!selected) return;
 
     if (
       selected.size >
@@ -207,26 +185,18 @@ export default function Home() {
     setFile(selected);
   };
 
-  /*
-   * =========================================
-   * UPLOAD
-   * =========================================
-   */
+  /* =========================
+     UPLOAD
+  ========================= */
 
   const uploadFile = async () => {
-    if (!file || uploading) {
-      return;
-    }
+    if (!file || uploading) return;
 
     setUploading(true);
     setError("");
     setMessage("");
 
     try {
-      /*
-       * 1. CREATE TRANSFER
-       */
-
       const initResponse =
         await fetch(
           FUNCTION_URL,
@@ -235,20 +205,17 @@ export default function Home() {
 
             headers: {
               "Content-Type":
-                "application/json",
+                "application/json"
             },
 
             body: JSON.stringify({
               action: "init-upload",
-
               fileName: file.name,
-
               fileSize: file.size,
-
               mimeType:
                 file.type ||
-                "application/octet-stream",
-            }),
+                "application/octet-stream"
+            })
           }
         );
 
@@ -262,12 +229,8 @@ export default function Home() {
         );
       }
 
-      /*
-       * 2. UPLOAD DIRECTLY TO SUPABASE
-       */
-
       const {
-        error: uploadError,
+        error: uploadError
       } =
         await supabase.storage
           .from("temporary-files")
@@ -281,10 +244,6 @@ export default function Home() {
         throw uploadError;
       }
 
-      /*
-       * 3. ACTIVATE TRANSFER
-       */
-
       const activateResponse =
         await fetch(
           FUNCTION_URL,
@@ -293,16 +252,15 @@ export default function Home() {
 
             headers: {
               "Content-Type":
-                "application/json",
+                "application/json"
             },
 
             body: JSON.stringify({
               action:
                 "activate-upload",
-
               code:
-                initData.code,
-            }),
+                initData.code
+            })
           }
         );
 
@@ -315,10 +273,6 @@ export default function Home() {
             "Unable to activate transfer."
         );
       }
-
-      /*
-       * 4. SHOW CODE
-       */
 
       setTransferCode(
         initData.code
@@ -351,11 +305,9 @@ export default function Home() {
     }
   };
 
-  /*
-   * =========================================
-   * DOWNLOAD
-   * =========================================
-   */
+  /* =========================
+     DOWNLOAD
+  ========================= */
 
   const downloadFile = async (
     suppliedCode = ""
@@ -376,10 +328,6 @@ export default function Home() {
     setMessage("");
 
     try {
-      /*
-       * 1. CLAIM FILE
-       */
-
       const response =
         await fetch(
           FUNCTION_URL,
@@ -388,15 +336,14 @@ export default function Home() {
 
             headers: {
               "Content-Type":
-                "application/json",
+                "application/json"
             },
 
             body: JSON.stringify({
               action:
                 "prepare-download",
-
-              code,
-            }),
+              code
+            })
           }
         );
 
@@ -410,10 +357,6 @@ export default function Home() {
         );
       }
 
-      /*
-       * 2. DOWNLOAD FILE
-       */
-
       const fileResponse =
         await fetch(data.url);
 
@@ -425,10 +368,6 @@ export default function Home() {
 
       const blob =
         await fileResponse.blob();
-
-      /*
-       * 3. BROWSER DOWNLOAD
-       */
 
       const blobUrl =
         URL.createObjectURL(blob);
@@ -448,11 +387,11 @@ export default function Home() {
 
       link.remove();
 
-      URL.revokeObjectURL(blobUrl);
-
-      /*
-       * 4. DELETE FROM SERVER
-       */
+      setTimeout(() => {
+        URL.revokeObjectURL(
+          blobUrl
+        );
+      }, 1000);
 
       await fetch(
         FUNCTION_URL,
@@ -461,15 +400,14 @@ export default function Home() {
 
           headers: {
             "Content-Type":
-              "application/json",
+              "application/json"
           },
 
           body: JSON.stringify({
             action:
               "complete-download",
-
-            id: data.id,
-          }),
+            id: data.id
+          })
         }
       );
 
@@ -490,16 +428,21 @@ export default function Home() {
     }
   };
 
-  /*
-   * =========================================
-   * QR AUTO DOWNLOAD
-   * =========================================
-   */
+  /* =========================
+     QR
+  ========================= */
+
+  const qrValue =
+    origin && transferCode
+      ? `${origin}/?code=${transferCode}`
+      : "";
+
+  /* =========================
+     QR AUTO DOWNLOAD
+  ========================= */
 
   useEffect(() => {
-    if (
-      qrAttempted.current
-    ) {
+    if (qrAttempted.current) {
       return;
     }
 
@@ -520,37 +463,29 @@ export default function Home() {
       setReceiveCode(code);
 
       setMessage(
-        "QR transfer found. Starting download..."
+        "Transfer found. Starting download..."
       );
 
       const timer =
         setTimeout(() => {
           downloadFile(code);
-        }, 800);
+        }, 700);
 
-      return () => {
+      return () =>
         clearTimeout(timer);
-      };
     }
   }, []);
 
-  /*
-   * =========================================
-   * RESET
-   * =========================================
-   */
+  /* =========================
+     RESET
+  ========================= */
 
   const resetUpload = () => {
     setFile(null);
-
     setTransferCode("");
-
     setExpiresAt(null);
-
     setRemainingSeconds(0);
-
     setMessage("");
-
     setError("");
 
     if (fileInputRef.current) {
@@ -558,36 +493,15 @@ export default function Home() {
     }
   };
 
-  /*
-   * =========================================
-   * QR
-   * =========================================
-   */
-
-  const qrUrl =
-    origin && transferCode
-      ? `${origin}/?code=${transferCode}`
-      : "";
-
-  const qrImage =
-    qrUrl
-      ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&data=${encodeURIComponent(
-          qrUrl
-        )}`
-      : "";
-
-  /*
-   * =========================================
-   * UI
-   * =========================================
-   */
+  /* =========================
+     UI
+  ========================= */
 
   return (
     <main
       className={`page ${theme}`}
     >
       <div className="background-glow glow-one" />
-
       <div className="background-glow glow-two" />
 
       <section className="container">
@@ -618,6 +532,7 @@ export default function Home() {
             type="button"
             className="theme-toggle"
             onClick={toggleTheme}
+            aria-label="Toggle theme"
           >
             {theme === "dark"
               ? "☀️"
@@ -647,7 +562,7 @@ export default function Home() {
 
         </section>
 
-        {/* TRANSFER */}
+        {/* CARDS */}
 
         <div className="transfer-grid">
 
@@ -658,7 +573,6 @@ export default function Home() {
             <div className="card-top">
 
               <div>
-
                 <span className="eyebrow">
                   SEND
                 </span>
@@ -666,7 +580,6 @@ export default function Home() {
                 <h3>
                   Upload a file
                 </h3>
-
               </div>
 
               <div className="icon-circle upload-icon">
@@ -696,9 +609,7 @@ export default function Home() {
                   {file ? (
                     <>
                       <strong
-                        title={
-                          file.name
-                        }
+                        title={file.name}
                       >
                         {file.name}
                       </strong>
@@ -804,23 +715,16 @@ export default function Home() {
                     <div className="transfer-code-box">
 
                       <span className="transfer-code">
-                        {
-                          transferCode
-                        }
+                        {transferCode}
                       </span>
 
                     </div>
 
                     <div className="expiry">
-
                       Expires in{" "}
-
                       <strong>
-                        {
-                          formatTime()
-                        }
+                        {formatTime()}
                       </strong>
-
                     </div>
 
                     <button
@@ -843,17 +747,21 @@ export default function Home() {
 
                     <div className="qr-box">
 
-                      {qrImage && (
-                        <img
-                          src={qrImage}
-                          alt="HoneyShare download QR code"
+                      {qrValue && (
+                        <QRCodeCanvas
+                          value={qrValue}
+                          size={180}
+                          bgColor="#ffffff"
+                          fgColor="#111827"
+                          level="M"
+                          includeMargin={true}
                         />
                       )}
 
                     </div>
 
                     <span className="qr-hint">
-                      Scan with phone camera
+                      Scan with your phone camera
                     </span>
 
                   </div>
@@ -861,7 +769,6 @@ export default function Home() {
                 </div>
 
               </div>
-
             )}
 
           </section>
@@ -903,9 +810,7 @@ export default function Home() {
                 autoComplete="off"
                 maxLength={5}
                 placeholder="00000"
-                value={
-                  receiveCode
-                }
+                value={receiveCode}
                 onChange={(event) => {
                   setError("");
                   setMessage("");
@@ -941,7 +846,6 @@ export default function Home() {
                 downloadFile()
               }
             >
-
               {downloading
                 ? "Downloading..."
                 : "Find File"}
@@ -949,7 +853,6 @@ export default function Home() {
               <span>
                 →
               </span>
-
             </button>
 
           </section>
@@ -978,7 +881,6 @@ export default function Home() {
             <span className="info-icon">
               ⚡
             </span>
-
             Quick transfer
           </div>
 
@@ -986,7 +888,6 @@ export default function Home() {
             <span className="info-icon">
               🔒
             </span>
-
             Private files
           </div>
 
@@ -994,7 +895,6 @@ export default function Home() {
             <span className="info-icon">
               ⌛
             </span>
-
             Auto deleted
           </div>
 
@@ -1008,7 +908,9 @@ export default function Home() {
             HoneyShare
           </span>
 
-          <span>•</span>
+          <span>
+            •
+          </span>
 
           <a
             href="https://github.com/honey-share"
@@ -1018,7 +920,9 @@ export default function Home() {
             GitHub
           </a>
 
-          <span>•</span>
+          <span>
+            •
+          </span>
 
           <span>
             Temporary file sharing
