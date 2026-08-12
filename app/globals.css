@@ -39,7 +39,8 @@ button {
   --muted: #9da6c0;
   --muted-2: #606a86;
 
-  --card: rgba(20, 27, 49, 0.88);
+  --card: rgba(20, 27, 49, 0.9);
+
   --border: #27304b;
 
   --input: #0e1529;
@@ -55,7 +56,7 @@ button {
   width: 100%;
   height: 100svh;
 
-  min-height: 620px;
+  min-height: 650px;
 
   overflow: hidden;
 
@@ -63,7 +64,7 @@ button {
 
   color: var(--text);
 
-  padding: 28px 20px;
+  padding: 18px 24px;
 
   display: flex;
 
@@ -75,7 +76,7 @@ button {
 }
 
 /* =========================================
-   LIGHT MODE
+   LIGHT
 ========================================= */
 
 .page.light {
@@ -87,7 +88,7 @@ button {
 
   --muted-2: #7c879b;
 
-  --card: rgba(255, 255, 255, 0.9);
+  --card: rgba(255, 255, 255, 0.92);
 
   --border: #dce2ee;
 
@@ -103,7 +104,7 @@ button {
 }
 
 /* =========================================
-   BACKGROUND GLOW
+   BACKGROUND
 ========================================= */
 
 .background-glow {
@@ -118,7 +119,7 @@ button {
 
   pointer-events: none;
 
-  opacity: 0.3;
+  opacity: 0.25;
 
   z-index: 0;
 }
@@ -138,11 +139,11 @@ button {
 }
 
 .page.light .glow-one {
-  opacity: 0.12;
+  opacity: 0.09;
 }
 
 .page.light .glow-two {
-  opacity: 0.08;
+  opacity: 0.06;
 }
 
 /* =========================================
@@ -154,10 +155,7 @@ button {
 
   z-index: 1;
 
-  width: min(
-    1050px,
-    100%
-  );
+  width: min(1050px, 100%);
 
   max-height: 100%;
 
@@ -175,7 +173,7 @@ button {
 
   justify-content: space-between;
 
-  margin-bottom: 34px;
+  margin-bottom: 18px;
 }
 
 .brand {
@@ -183,7 +181,7 @@ button {
 
   align-items: center;
 
-  gap: 13px;
+  gap: 12px;
 }
 
 .logo-mark {
@@ -203,8 +201,6 @@ button {
   font-size: 22px;
 
   font-weight: 800;
-
-  flex-shrink: 0;
 }
 
 .header h1 {
@@ -224,7 +220,7 @@ button {
 }
 
 /* =========================================
-   THEME BUTTON
+   THEME
 ========================================= */
 
 .theme-toggle {
@@ -261,7 +257,7 @@ button {
 .hero {
   max-width: 700px;
 
-  margin-bottom: 28px;
+  margin-bottom: 18px;
 }
 
 .badge {
@@ -271,39 +267,35 @@ button {
 
   color: var(--muted);
 
-  padding: 7px 11px;
+  padding: 6px 11px;
 
   border-radius: 999px;
 
-  font-size: 10px;
+  font-size: 9px;
 
   font-weight: 700;
 
   letter-spacing: 1px;
 
-  margin-bottom: 14px;
+  margin-bottom: 9px;
 }
 
 .hero h2 {
-  font-size: clamp(
-    42px,
-    5.5vw,
-    64px
-  );
+  font-size: clamp(42px, 5vw, 58px);
 
   line-height: 0.98;
 
   letter-spacing: -3px;
 
-  margin: 0 0 15px;
+  margin: 0 0 10px;
 }
 
 .hero p {
   color: var(--muted);
 
-  line-height: 1.6;
+  line-height: 1.5;
 
-  font-size: 15px;
+  font-size: 13px;
 
   max-width: 620px;
 
@@ -311,15 +303,15 @@ button {
 }
 
 /* =========================================
-   TRANSFER GRID
+   GRID
 ========================================= */
 
 .transfer-grid {
   display: grid;
 
   grid-template-columns:
-    1.25fr
-    0.75fr;
+    1.45fr
+    0.85fr;
 
   gap: 18px;
 }
@@ -333,35 +325,21 @@ button {
 
   border: 1px solid var(--border);
 
-  border-radius: 24px;
+  border-radius: 23px;
 
-  padding: 24px;
+  padding: 19px;
 
   backdrop-filter: blur(20px);
 
   box-shadow:
     0 20px 60px
-    rgba(
-      0,
-      0,
-      0,
-      0.16
-    );
-
-  transition:
-    background 0.3s ease,
-    border-color 0.3s ease;
+    rgba(0, 0, 0, 0.16);
 }
 
 .page.light .card {
   box-shadow:
     0 20px 50px
-    rgba(
-      30,
-      45,
-      80,
-      0.08
-    );
+    rgba(30, 45, 80, 0.08);
 }
 
 .card-top {
@@ -371,7 +349,7 @@ button {
 
   align-items: flex-start;
 
-  margin-bottom: 22px;
+  margin-bottom: 14px;
 }
 
 .eyebrow {
@@ -379,19 +357,19 @@ button {
 
   color: var(--muted);
 
-  font-size: 10px;
+  font-size: 9px;
 
   font-weight: 800;
 
   letter-spacing: 1.8px;
 
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 
 .card h3 {
   margin: 0;
 
-  font-size: 24px;
+  font-size: 23px;
 
   letter-spacing: -0.7px;
 }
@@ -409,8 +387,6 @@ button {
   font-size: 22px;
 
   font-weight: 700;
-
-  flex-shrink: 0;
 }
 
 .upload-icon {
@@ -430,7 +406,7 @@ button {
 ========================================= */
 
 .drop-zone {
-  min-height: 190px;
+  min-height: 165px;
 
   border: 1px dashed #3b4665;
 
@@ -446,7 +422,7 @@ button {
 
   text-align: center;
 
-  padding: 22px;
+  padding: 20px;
 
   cursor: pointer;
 
@@ -463,30 +439,19 @@ button {
   border-color: #8b7cf6;
 
   background:
-    rgba(
-      255,
-      255,
-      255,
-      0.025
-    );
+    rgba(255, 255, 255, 0.025);
 }
 
-.page.light
-.drop-zone:hover {
+.page.light .drop-zone:hover {
   background:
-    rgba(
-      80,
-      100,
-      160,
-      0.04
-    );
+    rgba(80, 100, 160, 0.04);
 }
 
 .drop-icon {
-  width: 52px;
-  height: 52px;
+  width: 46px;
+  height: 46px;
 
-  border-radius: 16px;
+  border-radius: 14px;
 
   display: grid;
 
@@ -496,9 +461,9 @@ button {
 
   color: #c9c2ff;
 
-  font-size: 25px;
+  font-size: 24px;
 
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .page.light .drop-icon {
@@ -508,11 +473,11 @@ button {
 }
 
 .drop-zone strong {
-  font-size: 15px;
+  font-size: 14px;
 
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 
-  max-width: 90%;
+  max-width: 85%;
 
   overflow: hidden;
 
@@ -524,9 +489,9 @@ button {
 .drop-zone span {
   color: var(--muted);
 
-  font-size: 12px;
+  font-size: 11px;
 
-  max-width: 90%;
+  max-width: 85%;
 
   overflow: hidden;
 
@@ -536,11 +501,11 @@ button {
 }
 
 .drop-zone small {
-  margin-top: 17px;
+  margin-top: 12px;
 
   color: var(--muted-2);
 
-  font-size: 10px;
+  font-size: 9px;
 }
 
 /* =========================================
@@ -551,13 +516,13 @@ button {
 .secondary-button {
   width: 100%;
 
-  height: 52px;
+  height: 49px;
 
   border: 0;
 
   border-radius: 14px;
 
-  margin-top: 18px;
+  margin-top: 14px;
 
   display: flex;
 
@@ -581,9 +546,7 @@ button {
   color: var(--primary-text);
 }
 
-.primary-button:hover:not(
-  :disabled
-) {
+.primary-button:hover:not(:disabled) {
   transform: translateY(-2px);
 }
 
@@ -592,8 +555,6 @@ button {
   opacity: 0.35;
 
   cursor: not-allowed;
-
-  transform: none;
 }
 
 .secondary-button {
@@ -604,23 +565,9 @@ button {
   border: 1px solid var(--border);
 }
 
-.secondary-button:hover:not(
-  :disabled
-) {
+.secondary-button:hover:not(:disabled) {
   background:
-    rgba(
-      255,
-      255,
-      255,
-      0.08
-    );
-}
-
-.page.light
-.secondary-button:hover:not(
-  :disabled
-) {
-  background: #e4e9f2;
+    rgba(255, 255, 255, 0.08);
 }
 
 /* =========================================
@@ -628,7 +575,7 @@ button {
 ========================================= */
 
 .code-area {
-  min-height: 190px;
+  min-height: 165px;
 
   display: flex;
 
@@ -640,15 +587,15 @@ button {
 .code-area label {
   color: var(--muted);
 
-  font-size: 12px;
+  font-size: 11px;
 
-  margin-bottom: 9px;
+  margin-bottom: 8px;
 }
 
 .code-area input {
   width: 100%;
 
-  height: 64px;
+  height: 61px;
 
   border:
     1px solid
@@ -666,7 +613,7 @@ button {
 
   text-align: center;
 
-  font-size: 27px;
+  font-size: 26px;
 
   font-weight: 700;
 
@@ -682,12 +629,7 @@ button {
 
   box-shadow:
     0 0 0 3px
-    rgba(
-      139,
-      124,
-      246,
-      0.1
-    );
+    rgba(139, 124, 246, 0.1);
 }
 
 .code-area input::placeholder {
@@ -699,15 +641,15 @@ button {
 .code-hint {
   color: var(--muted-2);
 
-  font-size: 10px;
+  font-size: 9px;
 
-  margin-top: 10px;
+  margin-top: 9px;
 
   text-align: center;
 }
 
 /* =========================================
-   UPLOADING
+   UPLOAD
 ========================================= */
 
 .uploading-state {
@@ -721,16 +663,16 @@ button {
 
   gap: 9px;
 
-  margin-top: 15px;
+  margin-top: 12px;
 
   color: var(--muted);
 
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .upload-spinner {
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
 
   border: 2px solid var(--border);
 
@@ -749,11 +691,11 @@ button {
 }
 
 /* =========================================
-   SUCCESS / UPLOADED
+   SUCCESS
 ========================================= */
 
 .success-area {
-  min-height: 350px;
+  min-height: 320px;
 
   display: flex;
 
@@ -773,21 +715,16 @@ button {
 
   gap: 7px;
 
-  padding: 7px 12px;
+  padding: 6px 11px;
 
   border-radius: 999px;
 
   background:
-    rgba(
-      0,
-      169,
-      130,
-      0.09
-    );
+    rgba(0, 169, 130, 0.09);
 
   color: #00a982;
 
-  font-size: 11px;
+  font-size: 10px;
 
   font-weight: 800;
 
@@ -795,7 +732,7 @@ button {
 
   letter-spacing: 1px;
 
-  margin-bottom: 18px;
+  margin-bottom: 13px;
 }
 
 .uploaded-check {
@@ -813,13 +750,33 @@ button {
   color: white;
 
   font-size: 10px;
-
-  font-weight: 900;
 }
 
 /* =========================================
-   FILE INFO
+   SUCCESS CONTENT
 ========================================= */
+
+.success-content {
+  width: 100%;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    170px;
+
+  align-items: center;
+
+  gap: 22px;
+}
+
+.code-success {
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+}
 
 .file-info {
   width: 100%;
@@ -830,9 +787,9 @@ button {
 
   align-items: center;
 
-  gap: 4px;
+  gap: 3px;
 
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .file-label {
@@ -846,11 +803,11 @@ button {
 }
 
 .file-name {
-  max-width: 80%;
+  max-width: 85%;
 
   color: var(--muted);
 
-  font-size: 12px;
+  font-size: 10px;
 
   font-weight: 500;
 
@@ -862,28 +819,27 @@ button {
 }
 
 /* =========================================
-   CODE
+   TRANSFER CODE
 ========================================= */
 
 .code-label {
   color: var(--muted-2);
 
-  font-size: 9px;
+  font-size: 8px;
 
   font-weight: 800;
 
-  letter-spacing: 1.6px;
+  letter-spacing: 1.5px;
 
-  margin-bottom: 8px;
+  margin-bottom: 7px;
 }
 
 .transfer-code-box {
-  width: min(
-    270px,
-    90%
-  );
+  width: 260px;
 
-  height: 72px;
+  max-width: 100%;
+
+  height: 67px;
 
   display: flex;
 
@@ -901,9 +857,7 @@ button {
 .transfer-code {
   color: var(--text);
 
-  font-size: 34px;
-
-  line-height: 1;
+  font-size: 31px;
 
   font-weight: 800;
 
@@ -913,20 +867,14 @@ button {
 
   font-variant-numeric:
     tabular-nums;
-
-  user-select: text;
 }
-
-/* =========================================
-   EXPIRY
-========================================= */
 
 .expiry {
   color: var(--muted);
 
-  font-size: 10px;
+  font-size: 9px;
 
-  margin-top: 12px;
+  margin-top: 9px;
 }
 
 .expiry strong {
@@ -936,10 +884,6 @@ button {
     tabular-nums;
 }
 
-/* =========================================
-   RESET
-========================================= */
-
 .reset-button {
   border: 0;
 
@@ -947,81 +891,111 @@ button {
 
   color: var(--muted);
 
-  font-size: 10px;
+  font-size: 9px;
 
-  margin-top: 12px;
+  margin-top: 9px;
 
   text-decoration: underline;
-
-  cursor: pointer;
-}
-
-.reset-button:hover {
-  color: var(--text);
 }
 
 /* =========================================
-   STATUS MESSAGE
+   QR
+========================================= */
+
+.qr-section {
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+}
+
+.qr-label {
+  color: var(--muted-2);
+
+  font-size: 8px;
+
+  font-weight: 800;
+
+  letter-spacing: 1.4px;
+
+  margin-bottom: 7px;
+}
+
+.qr-box {
+  width: 135px;
+  height: 135px;
+
+  padding: 8px;
+
+  border-radius: 14px;
+
+  background: white;
+
+  display: grid;
+
+  place-items: center;
+}
+
+.qr-box img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+}
+
+.qr-hint {
+  color: var(--muted);
+
+  font-size: 8px;
+
+  margin-top: 7px;
+}
+
+/* =========================================
+   STATUS
 ========================================= */
 
 .status-message {
   width: 100%;
 
-  margin-top: 12px;
+  margin-top: 9px;
 
-  padding: 10px 14px;
+  padding: 9px 14px;
 
   border-radius: 10px;
 
   text-align: center;
 
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .status-message.success {
   background:
-    rgba(
-      0,
-      190,
-      150,
-      0.08
-    );
+    rgba(0, 190, 150, 0.08);
 
   border:
     1px solid
-    rgba(
-      0,
-      190,
-      150,
-      0.2
-    );
+    rgba(0, 190, 150, 0.2);
 
   color: #00a982;
 }
 
 .status-message.error {
   background:
-    rgba(
-      240,
-      80,
-      90,
-      0.08
-    );
+    rgba(240, 80, 90, 0.08);
 
   border:
     1px solid
-    rgba(
-      240,
-      80,
-      90,
-      0.2
-    );
+    rgba(240, 80, 90, 0.2);
 
   color: #e66a73;
 }
 
 /* =========================================
-   INFO ROW
+   INFO
 ========================================= */
 
 .info-row {
@@ -1031,11 +1005,11 @@ button {
 
   gap: 35px;
 
-  margin: 22px 0 12px;
+  margin: 12px 0 8px;
 
   color: var(--muted);
 
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .info-row div {
@@ -1047,7 +1021,7 @@ button {
 }
 
 .info-icon {
-  font-size: 13px;
+  font-size: 12px;
 }
 
 /* =========================================
@@ -1065,9 +1039,7 @@ footer {
 
   color: var(--muted-2);
 
-  font-size: 10px;
-
-  padding-top: 5px;
+  font-size: 9px;
 }
 
 footer span:first-child {
@@ -1080,9 +1052,6 @@ footer a {
   color: inherit;
 
   text-decoration: none;
-
-  transition:
-    color 0.2s ease;
 }
 
 footer a:hover {
@@ -1090,7 +1059,7 @@ footer a:hover {
 }
 
 /* =========================================
-   SMALL DESKTOP
+   SHORT DESKTOP
 ========================================= */
 
 @media
@@ -1098,48 +1067,56 @@ footer a:hover {
 and (max-height: 760px) {
 
   .page {
-    padding-top: 18px;
-
-    padding-bottom: 18px;
+    padding-top: 12px;
+    padding-bottom: 12px;
   }
 
   .header {
-    margin-bottom: 22px;
+    margin-bottom: 12px;
   }
 
   .hero {
-    margin-bottom: 20px;
+    margin-bottom: 12px;
   }
 
   .hero h2 {
-    font-size: 48px;
+    font-size: 46px;
 
-    margin-bottom: 10px;
+    margin-bottom: 7px;
   }
 
   .hero p {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .card {
-    padding: 20px;
-  }
-
-  .card-top {
-    margin-bottom: 16px;
+    padding: 17px;
   }
 
   .drop-zone,
   .code-area {
-    min-height: 160px;
+    min-height: 140px;
   }
 
   .success-area {
-    min-height: 300px;
+    min-height: 270px;
+  }
+
+  .success-content {
+    grid-template-columns:
+      minmax(0, 1fr)
+      150px;
+
+    gap: 14px;
+  }
+
+  .qr-box {
+    width: 120px;
+    height: 120px;
   }
 
   .info-row {
-    margin-top: 15px;
+    margin-top: 8px;
   }
 }
 
@@ -1156,7 +1133,7 @@ and (max-height: 760px) {
 
     overflow: visible;
 
-    padding: 24px 15px;
+    padding: 20px 14px;
   }
 
   .container {
@@ -1164,62 +1141,36 @@ and (max-height: 760px) {
   }
 
   .header {
-    margin-bottom: 38px;
-  }
-
-  .hero {
     margin-bottom: 28px;
   }
 
-  .hero h2 {
-    font-size: 43px;
-
-    letter-spacing: -2px;
+  .hero {
+    margin-bottom: 23px;
   }
 
-  .hero p {
-    font-size: 14px;
+  .hero h2 {
+    font-size: 41px;
+
+    letter-spacing: -2.3px;
   }
 
   .transfer-grid {
     grid-template-columns: 1fr;
   }
 
-  .card {
-    padding: 21px;
-  }
-
-  .drop-zone {
-    min-height: 180px;
-  }
-
-  .code-area {
-    min-height: 170px;
-  }
-
   .success-area {
-    min-height: 300px;
+    min-height: 450px;
   }
 
-  .transfer-code-box {
-    width: min(
-      250px,
-      90%
-    );
+  .success-content {
+    grid-template-columns: 1fr;
 
-    height: 68px;
+    gap: 22px;
   }
 
-  .transfer-code {
-    font-size: 31px;
-
-    letter-spacing: 6px;
-
-    padding-left: 6px;
-  }
-
-  .file-name {
-    max-width: 75%;
+  .qr-box {
+    width: 145px;
+    height: 145px;
   }
 
   .info-row {
@@ -1227,9 +1178,9 @@ and (max-height: 760px) {
 
     align-items: center;
 
-    gap: 12px;
+    gap: 9px;
 
-    margin-top: 25px;
+    margin-top: 18px;
   }
 
   footer {
@@ -1240,13 +1191,13 @@ and (max-height: 760px) {
 }
 
 /* =========================================
-   VERY SMALL MOBILE
+   SMALL MOBILE
 ========================================= */
 
 @media (max-width: 380px) {
 
   .hero h2 {
-    font-size: 37px;
+    font-size: 36px;
   }
 
   .card h3 {
@@ -1260,7 +1211,7 @@ and (max-height: 760px) {
   }
 
   .transfer-code {
-    font-size: 28px;
+    font-size: 27px;
 
     letter-spacing: 5px;
 
