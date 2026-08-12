@@ -75,7 +75,7 @@ button {
 }
 
 /* =========================================
-   LIGHT
+   LIGHT MODE
 ========================================= */
 
 .page.light {
@@ -103,7 +103,7 @@ button {
 }
 
 /* =========================================
-   BACKGROUND
+   BACKGROUND GLOW
 ========================================= */
 
 .background-glow {
@@ -224,7 +224,7 @@ button {
 }
 
 /* =========================================
-   THEME
+   THEME BUTTON
 ========================================= */
 
 .theme-toggle {
@@ -311,7 +311,7 @@ button {
 }
 
 /* =========================================
-   GRID
+   TRANSFER GRID
 ========================================= */
 
 .transfer-grid {
@@ -707,50 +707,49 @@ button {
 }
 
 /* =========================================
-   PROGRESS
+   UPLOADING
 ========================================= */
 
-.progress-wrapper {
-  margin-top: 14px;
-}
-
-.progress-track {
+.uploading-state {
   width: 100%;
 
-  height: 6px;
+  display: flex;
 
-  background: var(--secondary);
+  align-items: center;
 
-  border-radius: 999px;
+  justify-content: center;
 
-  overflow: hidden;
-}
+  gap: 9px;
 
-.progress-bar {
-  height: 100%;
-
-  background: #8b7cf6;
-
-  border-radius: 999px;
-
-  transition:
-    width 0.25s ease;
-}
-
-.progress-wrapper span {
-  display: block;
-
-  margin-top: 7px;
-
-  text-align: center;
+  margin-top: 15px;
 
   color: var(--muted);
 
-  font-size: 10px;
+  font-size: 11px;
+}
+
+.upload-spinner {
+  width: 15px;
+  height: 15px;
+
+  border: 2px solid var(--border);
+
+  border-top-color: #8b7cf6;
+
+  border-radius: 50%;
+
+  animation:
+    honey-spin 0.7s linear infinite;
+}
+
+@keyframes honey-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* =========================================
-   SUCCESS
+   SUCCESS / UPLOADED
 ========================================= */
 
 .success-area {
@@ -767,43 +766,93 @@ button {
   text-align: center;
 }
 
-.success-icon {
-  width: 54px;
-  height: 54px;
+.uploaded-status {
+  display: inline-flex;
 
-  border-radius: 50%;
+  align-items: center;
+
+  gap: 7px;
+
+  padding: 7px 12px;
+
+  border-radius: 999px;
+
+  background:
+    rgba(
+      0,
+      169,
+      130,
+      0.09
+    );
+
+  color: #00a982;
+
+  font-size: 11px;
+
+  font-weight: 800;
+
+  text-transform: uppercase;
+
+  letter-spacing: 1px;
+
+  margin-bottom: 18px;
+}
+
+.uploaded-check {
+  width: 17px;
+  height: 17px;
 
   display: grid;
 
   place-items: center;
 
-  background: #d7fff2;
+  border-radius: 50%;
 
-  color: #00866b;
+  background: #00a982;
 
-  font-size: 25px;
-
-  font-weight: 800;
-
-  margin-bottom: 12px;
-}
-
-.success-label {
-  color: #00a982;
+  color: white;
 
   font-size: 10px;
+
+  font-weight: 900;
+}
+
+/* =========================================
+   FILE INFO
+========================================= */
+
+.file-info {
+  width: 100%;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  gap: 4px;
+
+  margin-bottom: 20px;
+}
+
+.file-label {
+  color: var(--muted-2);
+
+  font-size: 8px;
 
   font-weight: 800;
 
   letter-spacing: 1.5px;
 }
 
-.success-area h4 {
-  max-width: 90%;
+.file-name {
+  max-width: 80%;
 
-  margin: 9px 0 14px;
+  color: var(--muted);
 
-  font-size: 14px;
+  font-size: 12px;
+
+  font-weight: 500;
 
   overflow: hidden;
 
@@ -812,26 +861,72 @@ button {
   white-space: nowrap;
 }
 
-.transfer-code {
-  font-size: 39px;
+/* =========================================
+   CODE
+========================================= */
+
+.code-label {
+  color: var(--muted-2);
+
+  font-size: 9px;
 
   font-weight: 800;
 
-  letter-spacing: 9px;
+  letter-spacing: 1.6px;
 
-  padding-left: 9px;
+  margin-bottom: 8px;
+}
 
+.transfer-code-box {
+  width: min(
+    270px,
+    90%
+  );
+
+  height: 72px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  border-radius: 16px;
+
+  border: 1px solid var(--border);
+
+  background: var(--input);
+}
+
+.transfer-code {
   color: var(--text);
 
-  margin-bottom: 2px;
+  font-size: 34px;
+
+  line-height: 1;
+
+  font-weight: 800;
+
+  letter-spacing: 7px;
+
+  padding-left: 7px;
+
+  font-variant-numeric:
+    tabular-nums;
+
+  user-select: text;
 }
+
+/* =========================================
+   EXPIRY
+========================================= */
 
 .expiry {
   color: var(--muted);
 
-  font-size: 11px;
+  font-size: 10px;
 
-  margin-top: 13px;
+  margin-top: 12px;
 }
 
 .expiry strong {
@@ -840,6 +935,10 @@ button {
   font-variant-numeric:
     tabular-nums;
 }
+
+/* =========================================
+   RESET
+========================================= */
 
 .reset-button {
   border: 0;
@@ -850,9 +949,11 @@ button {
 
   font-size: 10px;
 
-  margin-top: 13px;
+  margin-top: 12px;
 
   text-decoration: underline;
+
+  cursor: pointer;
 }
 
 .reset-button:hover {
@@ -860,7 +961,7 @@ button {
 }
 
 /* =========================================
-   STATUS
+   STATUS MESSAGE
 ========================================= */
 
 .status-message {
@@ -920,7 +1021,7 @@ button {
 }
 
 /* =========================================
-   INFO
+   INFO ROW
 ========================================= */
 
 .info-row {
@@ -998,6 +1099,7 @@ and (max-height: 760px) {
 
   .page {
     padding-top: 18px;
+
     padding-bottom: 18px;
   }
 
@@ -1030,6 +1132,10 @@ and (max-height: 760px) {
   .drop-zone,
   .code-area {
     min-height: 160px;
+  }
+
+  .success-area {
+    min-height: 300px;
   }
 
   .info-row {
@@ -1095,12 +1201,25 @@ and (max-height: 760px) {
     min-height: 300px;
   }
 
+  .transfer-code-box {
+    width: min(
+      250px,
+      90%
+    );
+
+    height: 68px;
+  }
+
   .transfer-code {
-    font-size: 34px;
+    font-size: 31px;
 
-    letter-spacing: 7px;
+    letter-spacing: 6px;
 
-    padding-left: 7px;
+    padding-left: 6px;
+  }
+
+  .file-name {
+    max-width: 75%;
   }
 
   .info-row {
@@ -1138,5 +1257,13 @@ and (max-height: 760px) {
     font-size: 23px;
 
     letter-spacing: 6px;
+  }
+
+  .transfer-code {
+    font-size: 28px;
+
+    letter-spacing: 5px;
+
+    padding-left: 5px;
   }
 }
