@@ -1,6 +1,8 @@
+import "./globals.css";
+
 export const metadata = {
-  title: "HoneyShare",
-  description: "Temporary file sharing",
+  title: "HoneyShare — Temporary File Sharing",
+  description: "Fast, private and temporary file sharing.",
 };
 
 export default function RootLayout({ children }) {
