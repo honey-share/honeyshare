@@ -24,7 +24,6 @@ export default function Home() {
   const [theme, setTheme] = useState("dark");
 
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
 
   const [transferCode, setTransferCode] = useState("");
   const [expiresAt, setExpiresAt] = useState(null);
@@ -37,9 +36,9 @@ export default function Home() {
 
   const fileInputRef = useRef(null);
 
-  /* -----------------------------
+  /* =========================
      THEME
-  ----------------------------- */
+  ========================= */
 
   useEffect(() => {
     const savedTheme =
@@ -55,7 +54,9 @@ export default function Home() {
 
   const toggleTheme = () => {
     const newTheme =
-      theme === "dark" ? "light" : "dark";
+      theme === "dark"
+        ? "light"
+        : "dark";
 
     setTheme(newTheme);
 
@@ -65,13 +66,15 @@ export default function Home() {
     );
   };
 
-  /* -----------------------------
+  /* =========================
      FILE SIZE
-  ----------------------------- */
+  ========================= */
 
   const formatFileSize = (bytes) => {
     if (bytes < 1024 * 1024) {
-      return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(
+        bytes / 1024
+      ).toFixed(1)} KB`;
     }
 
     return `${(
@@ -80,12 +83,14 @@ export default function Home() {
     ).toFixed(2)} MB`;
   };
 
-  /* -----------------------------
+  /* =========================
      COUNTDOWN
-  ----------------------------- */
+  ========================= */
 
   const getRemainingTime = () => {
-    if (!expiresAt) return "";
+    if (!expiresAt) {
+      return "";
+    }
 
     const remaining = Math.max(
       0,
@@ -93,48 +98,61 @@ export default function Home() {
         Date.now()
     );
 
-    const totalSeconds = Math.floor(
-      remaining / 1000
-    );
+    const totalSeconds =
+      Math.floor(
+        remaining / 1000
+      );
 
-    const minutes = Math.floor(
-      totalSeconds / 60
-    );
+    const minutes =
+      Math.floor(
+        totalSeconds / 60
+      );
 
     const seconds =
       totalSeconds % 60;
 
-    return `${String(minutes).padStart(
+    return `${String(
+      minutes
+    ).padStart(
       2,
       "0"
-    )}:${String(seconds).padStart(
+    )}:${String(
+      seconds
+    ).padStart(
       2,
       "0"
     )}`;
   };
 
   useEffect(() => {
-    if (!expiresAt) return;
+    if (!expiresAt) {
+      return;
+    }
 
-    const timer = setInterval(() => {
-      if (
-        Date.now() >=
-        new Date(expiresAt).getTime()
-      ) {
-        setExpiresAt(null);
-        setTransferCode("");
-        setMessage(
-          "This transfer has expired."
-        );
-      }
-    }, 1000);
+    const timer =
+      setInterval(() => {
+        if (
+          Date.now() >=
+          new Date(
+            expiresAt
+          ).getTime()
+        ) {
+          setExpiresAt(null);
+          setTransferCode("");
 
-    return () => clearInterval(timer);
+          setMessage(
+            "This transfer has expired."
+          );
+        }
+      }, 1000);
+
+    return () =>
+      clearInterval(timer);
   }, [expiresAt]);
 
-  /* -----------------------------
-     FILE SELECT
-  ----------------------------- */
+  /* =========================
+     SELECT FILE
+  ========================= */
 
   const chooseFile = (event) => {
     setError("");
@@ -143,7 +161,9 @@ export default function Home() {
     const selectedFile =
       event.target.files?.[0];
 
-    if (!selectedFile) return;
+    if (!selectedFile) {
+      return;
+    }
 
     if (
       selectedFile.size >
@@ -151,8 +171,11 @@ export default function Home() {
     ) {
       setFile(null);
 
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+      if (
+        fileInputRef.current
+      ) {
+        fileInputRef.current.value =
+          "";
       }
 
       setError(
@@ -165,108 +188,130 @@ export default function Home() {
     setFile(selectedFile);
   };
 
-  /* -----------------------------
+  /* =========================
      UPLOAD
-  ----------------------------- */
+  ========================= */
 
   const uploadFile = async () => {
-    if (!file || uploading) return;
+    if (
+      !file ||
+      uploading
+    ) {
+      return;
+    }
 
     setError("");
     setMessage("");
     setUploading(true);
-    setUploadProgress(5);
 
     try {
-      /* STEP 1
-         Create transfer + signed upload URL
+      /*
+        STEP 1
+        Ask Supabase backend
+        to create transfer
       */
 
       const initResponse =
-        await fetch(FUNCTION_URL, {
-          method: "POST",
+        await fetch(
+          FUNCTION_URL,
+          {
+            method: "POST",
 
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
 
-          body: JSON.stringify({
-            action: "init-upload",
+            body: JSON.stringify({
+              action:
+                "init-upload",
 
-            fileName: file.name,
+              fileName:
+                file.name,
 
-            fileSize: file.size,
+              fileSize:
+                file.size,
 
-            mimeType:
-              file.type ||
-              "application/octet-stream",
-          }),
-        });
+              mimeType:
+                file.type ||
+                "application/octet-stream",
+            }),
+          }
+        );
 
       const initData =
         await initResponse.json();
 
-      if (!initResponse.ok) {
+      if (
+        !initResponse.ok
+      ) {
         throw new Error(
           initData.error ||
             "Unable to prepare upload."
         );
       }
 
-      setUploadProgress(15);
-
-      /* STEP 2
-         Upload directly to Supabase Storage
+      /*
+        STEP 2
+        Direct upload to
+        Supabase Storage
       */
 
       const {
-        error: uploadError,
-      } = await supabase.storage
-        .from("temporary-files")
-        .uploadToSignedUrl(
-          initData.path,
-          initData.token,
-          file
-        );
+        error:
+          uploadError,
+      } =
+        await supabase.storage
+          .from(
+            "temporary-files"
+          )
+          .uploadToSignedUrl(
+            initData.path,
+            initData.token,
+            file
+          );
 
       if (uploadError) {
         throw uploadError;
       }
 
-      setUploadProgress(85);
-
-      /* STEP 3
-         Activate transfer
+      /*
+        STEP 3
+        Activate transfer
       */
 
       const activateResponse =
-        await fetch(FUNCTION_URL, {
-          method: "POST",
+        await fetch(
+          FUNCTION_URL,
+          {
+            method: "POST",
 
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
 
-          body: JSON.stringify({
-            action: "activate-upload",
+            body: JSON.stringify({
+              action:
+                "activate-upload",
 
-            code: initData.code,
-          }),
-        });
+              code:
+                initData.code,
+            }),
+          }
+        );
 
       const activateData =
         await activateResponse.json();
 
-      if (!activateResponse.ok) {
+      if (
+        !activateResponse.ok
+      ) {
         throw new Error(
           activateData.error ||
             "Unable to finish upload."
         );
       }
-
-      setUploadProgress(100);
 
       setTransferCode(
         initData.code
@@ -294,29 +339,9 @@ export default function Home() {
     }
   };
 
-  /* -----------------------------
-     COPY CODE
-  ----------------------------- */
-
-  const copyCode = async () => {
-    if (!transferCode) return;
-
-    try {
-      await navigator.clipboard.writeText(
-        transferCode
-      );
-
-      setMessage("Code copied.");
-    } catch {
-      setMessage(
-        "Copy failed. Please copy the code manually."
-      );
-    }
-  };
-
-  /* -----------------------------
+  /* =========================
      DOWNLOAD
-  ----------------------------- */
+  ========================= */
 
   const downloadFile = async () => {
     if (
@@ -331,39 +356,48 @@ export default function Home() {
     setDownloading(true);
 
     try {
-      /* STEP 1
-         Verify code + get signed download URL
+      /*
+        STEP 1
+        Verify code
       */
 
       const prepareResponse =
-        await fetch(FUNCTION_URL, {
-          method: "POST",
+        await fetch(
+          FUNCTION_URL,
+          {
+            method: "POST",
 
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
 
-          body: JSON.stringify({
-            action:
-              "prepare-download",
+            body: JSON.stringify({
+              action:
+                "prepare-download",
 
-            code: receiveCode,
-          }),
-        });
+              code:
+                receiveCode,
+            }),
+          }
+        );
 
       const prepareData =
         await prepareResponse.json();
 
-      if (!prepareResponse.ok) {
+      if (
+        !prepareResponse.ok
+      ) {
         throw new Error(
           prepareData.error ||
             "File not found."
         );
       }
 
-      /* STEP 2
-         Download file
+      /*
+        STEP 2
+        Download from
+        signed URL
       */
 
       const fileResponse =
@@ -371,7 +405,9 @@ export default function Home() {
           prepareData.url
         );
 
-      if (!fileResponse.ok) {
+      if (
+        !fileResponse.ok
+      ) {
         throw new Error(
           "Unable to download the file."
         );
@@ -380,23 +416,32 @@ export default function Home() {
       const blob =
         await fileResponse.blob();
 
-      /* STEP 3
-         Browser download
+      /*
+        STEP 3
+        Trigger browser
+        download
       */
 
       const blobUrl =
-        URL.createObjectURL(blob);
+        URL.createObjectURL(
+          blob
+        );
 
       const link =
-        document.createElement("a");
+        document.createElement(
+          "a"
+        );
 
-      link.href = blobUrl;
+      link.href =
+        blobUrl;
 
       link.download =
         prepareData.fileName ||
         "download";
 
-      document.body.appendChild(link);
+      document.body.appendChild(
+        link
+      );
 
       link.click();
 
@@ -406,25 +451,30 @@ export default function Home() {
         blobUrl
       );
 
-      /* STEP 4
-         Delete file from server
+      /*
+        STEP 4
+        Delete transfer
       */
 
-      await fetch(FUNCTION_URL, {
-        method: "POST",
+      await fetch(
+        FUNCTION_URL,
+        {
+          method: "POST",
 
-        headers: {
-          "Content-Type":
-            "application/json",
-        },
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
 
-        body: JSON.stringify({
-          action:
-            "complete-download",
+          body: JSON.stringify({
+            action:
+              "complete-download",
 
-          id: prepareData.id,
-        }),
-      });
+            id:
+              prepareData.id,
+          }),
+        }
+      );
 
       setMessage(
         "Download complete. File deleted."
@@ -443,29 +493,33 @@ export default function Home() {
     }
   };
 
-  /* -----------------------------
+  /* =========================
      RESET
-  ----------------------------- */
+  ========================= */
 
   const resetUpload = () => {
     setFile(null);
     setTransferCode("");
     setExpiresAt(null);
-    setUploadProgress(0);
     setMessage("");
     setError("");
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    if (
+      fileInputRef.current
+    ) {
+      fileInputRef.current.value =
+        "";
     }
   };
 
-  /* -----------------------------
+  /* =========================
      UI
-  ----------------------------- */
+  ========================= */
 
   return (
-    <main className={`page ${theme}`}>
+    <main
+      className={`page ${theme}`}
+    >
       <div className="background-glow glow-one"></div>
 
       <div className="background-glow glow-two"></div>
@@ -496,10 +550,13 @@ export default function Home() {
 
           <button
             className="theme-toggle"
-            onClick={toggleTheme}
+            onClick={
+              toggleTheme
+            }
             aria-label="Toggle theme"
           >
-            {theme === "dark"
+            {theme ===
+            "dark"
               ? "☀️"
               : "🌙"}
           </button>
@@ -527,17 +584,18 @@ export default function Home() {
 
         </div>
 
-        {/* CARDS */}
+        {/* TRANSFER */}
 
         <div className="transfer-grid">
 
-          {/* UPLOAD */}
+          {/* SEND */}
 
           <div className="card send-card">
 
             <div className="card-top">
 
               <div>
+
                 <span className="eyebrow">
                   SEND
                 </span>
@@ -545,6 +603,7 @@ export default function Home() {
                 <h3>
                   Upload a file
                 </h3>
+
               </div>
 
               <div className="icon-circle upload-icon">
@@ -560,9 +619,13 @@ export default function Home() {
                 <label className="drop-zone">
 
                   <input
-                    ref={fileInputRef}
+                    ref={
+                      fileInputRef
+                    }
                     type="file"
-                    onChange={chooseFile}
+                    onChange={
+                      chooseFile
+                    }
                     hidden
                   />
 
@@ -573,9 +636,13 @@ export default function Home() {
                   {file ? (
                     <>
                       <strong
-                        title={file.name}
+                        title={
+                          file.name
+                        }
                       >
-                        {file.name}
+                        {
+                          file.name
+                        }
                       </strong>
 
                       <span>
@@ -604,22 +671,12 @@ export default function Home() {
 
                 {uploading && (
 
-                  <div className="progress-wrapper">
+                  <div className="uploading-state">
 
-                    <div className="progress-track">
-
-                      <div
-                        className="progress-bar"
-                        style={{
-                          width: `${uploadProgress}%`,
-                        }}
-                      />
-
-                    </div>
+                    <span className="upload-spinner"></span>
 
                     <span>
-                      Uploading...{" "}
-                      {uploadProgress}%
+                      Uploading file...
                     </span>
 
                   </div>
@@ -633,15 +690,21 @@ export default function Home() {
                     uploading
                   }
                   type="button"
-                  onClick={uploadFile}
+                  onClick={
+                    uploadFile
+                  }
                 >
+
                   {uploading
                     ? "Uploading..."
                     : "Upload File"}
 
-                  <span>
-                    →
-                  </span>
+                  {!uploading && (
+                    <span>
+                      →
+                    </span>
+                  )}
+
                 </button>
 
               </>
@@ -652,47 +715,67 @@ export default function Home() {
 
               <div className="success-area">
 
-                <div className="success-icon">
-                  ✓
-                </div>
+                <div className="uploaded-status">
 
-                <span className="success-label">
-                  FILE READY
-                </span>
-
-                <h4
-                  title={file?.name}
-                >
-                  {file?.name}
-                </h4>
-
-                <div className="transfer-code">
-                  {transferCode}
-                </div>
-
-                <button
-                  className="primary-button"
-                  type="button"
-                  onClick={copyCode}
-                >
-                  Copy Code
+                  <span className="uploaded-check">
+                    ✓
+                  </span>
 
                   <span>
-                    ⧉
+                    Uploaded
                   </span>
-                </button>
+
+                </div>
+
+                <div className="file-info">
+
+                  <span className="file-label">
+                    FILE
+                  </span>
+
+                  <span
+                    className="file-name"
+                    title={
+                      file?.name
+                    }
+                  >
+                    {file?.name}
+                  </span>
+
+                </div>
+
+                <span className="code-label">
+                  YOUR TRANSFER CODE
+                </span>
+
+                <div className="transfer-code-box">
+
+                  <span className="transfer-code">
+                    {
+                      transferCode
+                    }
+                  </span>
+
+                </div>
 
                 <div className="expiry">
+
                   Expires in{" "}
+
                   <strong>
-                    {getRemainingTime()}
+                    {
+                      getRemainingTime()
+                    }
                   </strong>
+
                 </div>
 
                 <button
                   className="reset-button"
                   type="button"
-                  onClick={resetUpload}
+                  onClick={
+                    resetUpload
+                  }
                 >
                   Send another file
                 </button>
@@ -740,8 +823,12 @@ export default function Home() {
                 autoComplete="off"
                 maxLength={5}
                 placeholder="00000"
-                value={receiveCode}
-                onChange={(event) => {
+                value={
+                  receiveCode
+                }
+                onChange={(
+                  event
+                ) => {
 
                   setError("");
                   setMessage("");
@@ -771,11 +858,15 @@ export default function Home() {
               className="secondary-button"
               type="button"
               disabled={
-                receiveCode.length !== 5 ||
+                receiveCode.length !==
+                  5 ||
                 downloading
               }
-              onClick={downloadFile}
+              onClick={
+                downloadFile
+              }
             >
+
               {downloading
                 ? "Downloading..."
                 : "Find File"}
@@ -783,6 +874,7 @@ export default function Home() {
               <span>
                 →
               </span>
+
             </button>
 
           </div>
@@ -791,7 +883,8 @@ export default function Home() {
 
         {/* STATUS */}
 
-        {(message || error) && (
+        {(message ||
+          error) && (
 
           <div
             className={`status-message ${
@@ -800,7 +893,10 @@ export default function Home() {
                 : "success"
             }`}
           >
-            {error || message}
+            {
+              error ||
+              message
+            }
           </div>
 
         )}
