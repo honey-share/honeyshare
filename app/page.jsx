@@ -17,20 +17,20 @@ const FUNCTION_URL =
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const TRANSFER_SECONDS = 5 * 60;
 
+const VISITOR_STORAGE_KEY =
+  "honeyshare-visitor-id";
+
+const PRESENCE_CHANNEL =
+  "honeyshare-live-users";
+
 const supabase = createClient(
   SUPABASE_URL,
   SUPABASE_KEY
 );
 
 /* =====================================================
-   ANALYTICS
+   VISITOR ID
 ===================================================== */
-
-const VISITOR_STORAGE_KEY =
-  "honeyshare-visitor-id";
-
-const PRESENCE_CHANNEL =
-  "honeyshare-live-users";
 
 function getVisitorId() {
   try {
@@ -46,7 +46,7 @@ function getVisitorId() {
           ? crypto.randomUUID()
           : `visitor-${Date.now()}-${Math.random()
               .toString(36)
-              .slice(2, 12)}`;
+              .slice(2, 10)}`;
 
       localStorage.setItem(
         VISITOR_STORAGE_KEY,
@@ -58,7 +58,7 @@ function getVisitorId() {
   } catch {
     return `visitor-${Date.now()}-${Math.random()
       .toString(36)
-      .slice(2, 12)}`;
+      .slice(2, 10)}`;
   }
 }
 
@@ -100,30 +100,30 @@ export default function Home() {
   const [origin, setOrigin] =
     useState("");
 
+  /* LIVE USERS */
+
+  const [liveUsers, setLiveUsers] =
+    useState(0);
+
   const fileInputRef =
     useRef(null);
 
   const qrAttempted =
     useRef(false);
 
-  /* =====================================================
-     ANALYTICS REFS
-  ===================================================== */
-
-  const visitorIdRef =
-    useRef(null);
-
   const presenceChannelRef =
     useRef(null);
 
   /* =====================================================
-     INITIAL + ANALYTICS
+     INITIAL + ANALYTICS + LIVE USERS
   ===================================================== */
 
   useEffect(() => {
     setOrigin(
       window.location.origin
     );
+
+    /* Theme */
 
     const savedTheme =
       localStorage.getItem(
@@ -137,27 +137,26 @@ export default function Home() {
       setTheme(savedTheme);
     }
 
-    /*
-      Create/get anonymous visitor ID.
-      Same browser keeps the same ID.
-    */
+    /* Anonymous visitor */
+
     const visitorId =
       getVisitorId();
 
-    visitorIdRef.current =
-      visitorId;
-
     /*
-      Record visitor in Supabase.
+      Record visitor in database.
+
       This updates:
-      - first_seen
-      - last_seen
-      - today's visitor record
+      - total visitor
+      - today's visitor
+      - monthly visitor
     */
+
     const recordVisitor =
       async () => {
         try {
-          const { error } =
+          const {
+            error: visitorError,
+          } =
             await supabase.rpc(
               "record_visitor",
               {
@@ -166,15 +165,15 @@ export default function Home() {
               }
             );
 
-          if (error) {
+          if (visitorError) {
             console.error(
-              "Analytics visitor error:",
-              error
+              "Visitor analytics error:",
+              visitorError
             );
           }
         } catch (err) {
           console.error(
-            "Analytics error:",
+            "Visitor tracking error:",
             err
           );
         }
@@ -182,15 +181,10 @@ export default function Home() {
 
     recordVisitor();
 
-    /*
-      Supabase Realtime Presence.
+    /* =================================================
+       SUPABASE REALTIME PRESENCE
+    ================================================= */
 
-      Every open active website tab
-      is one live presence.
-
-      The dashboard will later use
-      presenceState() to count them.
-    */
     const channel =
       supabase.channel(
         PRESENCE_CHANNEL,
@@ -206,50 +200,76 @@ export default function Home() {
     presenceChannelRef.current =
       channel;
 
-    channel
-      .on(
-        "presence",
-        {
-          event: "sync",
-        },
-        () => {
-          /*
-            We intentionally don't display
-            the count on the public page.
+    const updateLiveUsers =
+      () => {
+        const state =
+          channel.presenceState();
 
-            Admin analytics dashboard will
-            read this same Presence channel.
-          */
-        }
-      )
-      .subscribe(
-        async (status) => {
-          if (
-            status ===
-            "SUBSCRIBED"
-          ) {
-            try {
-              await channel.track({
-                visitor_id:
-                  visitorId,
+        /*
+          Presence keys are unique visitor IDs.
 
-                online_at:
-                  new Date().toISOString(),
-              });
-            } catch (err) {
-              console.error(
-                "Presence track error:",
-                err
-              );
-            }
+          Same visitor opening multiple tabs
+          will still count as one visitor.
+        */
+
+        const count =
+          Object.keys(
+            state || {}
+          ).length;
+
+        setLiveUsers(count);
+      };
+
+    channel.on(
+      "presence",
+      {
+        event: "sync",
+      },
+      updateLiveUsers
+    );
+
+    channel.on(
+      "presence",
+      {
+        event: "join",
+      },
+      updateLiveUsers
+    );
+
+    channel.on(
+      "presence",
+      {
+        event: "leave",
+      },
+      updateLiveUsers
+    );
+
+    channel.subscribe(
+      async (status) => {
+        if (
+          status ===
+          "SUBSCRIBED"
+        ) {
+          try {
+            await channel.track({
+              visitor_id:
+                visitorId,
+
+              online_at:
+                new Date().toISOString(),
+            });
+
+            updateLiveUsers();
+          } catch (err) {
+            console.error(
+              "Presence tracking error:",
+              err
+            );
           }
         }
-      );
+      }
+    );
 
-    /*
-      Cleanup when page/tab is closed
-      or component unmounts.
-    */
     return () => {
       if (
         presenceChannelRef.current
@@ -286,23 +306,22 @@ export default function Home() {
      FILE SIZE
   ===================================================== */
 
-  const formatFileSize = (
-    bytes
-  ) => {
-    if (
-      bytes <
-      1024 * 1024
-    ) {
-      return `${(
-        bytes / 1024
-      ).toFixed(1)} KB`;
-    }
+  const formatFileSize =
+    (bytes) => {
+      if (
+        bytes <
+        1024 * 1024
+      ) {
+        return `${(
+          bytes / 1024
+        ).toFixed(1)} KB`;
+      }
 
-    return `${(
-      bytes /
-      (1024 * 1024)
-    ).toFixed(2)} MB`;
-  };
+      return `${(
+        bytes /
+        (1024 * 1024)
+      ).toFixed(2)} MB`;
+    };
 
   /* =====================================================
      TIMER
@@ -670,11 +689,6 @@ export default function Home() {
           1000
         );
 
-        /*
-          Tell Edge Function that the
-          download completed so the file
-          can be deleted.
-        */
         await fetch(
           FUNCTION_URL,
           {
@@ -840,19 +854,44 @@ export default function Home() {
 
           </div>
 
-          <button
-            type="button"
-            className="theme-toggle"
-            onClick={
-              toggleTheme
-            }
-            aria-label="Toggle theme"
-          >
-            {theme ===
-            "dark"
-              ? "☀️"
-              : "🌙"}
-          </button>
+          <div className="header-actions">
+
+            {/* LIVE USERS */}
+
+            <div
+              className="live-users-badge"
+              title="Currently active visitors"
+            >
+
+              <span className="live-users-dot" />
+
+              <strong>
+                {liveUsers}
+              </strong>
+
+              <span>
+                Live
+              </span>
+
+            </div>
+
+            {/* THEME */}
+
+            <button
+              type="button"
+              className="theme-toggle"
+              onClick={
+                toggleTheme
+              }
+              aria-label="Toggle theme"
+            >
+              {theme ===
+              "dark"
+                ? "☀️"
+                : "🌙"}
+            </button>
+
+          </div>
 
         </header>
 
@@ -877,7 +916,7 @@ export default function Home() {
 
         </section>
 
-        {/* TRANSFER CARDS */}
+        {/* TRANSFER GRID */}
 
         <div className="transfer-grid">
 
