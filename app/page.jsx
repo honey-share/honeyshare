@@ -13,13 +13,9 @@ const SUPABASE_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-const MAX_FILE_SIZE =
-  50 * 1024 * 1024;
-
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_FILES = 10;
-
-const TRANSFER_SECONDS =
-  5 * 60;
+const TRANSFER_SECONDS = 5 * 60;
 
 const VISITOR_STORAGE_KEY =
   "honeyshare-visitor-id";
@@ -162,30 +158,18 @@ function formatTime(seconds) {
 }
 
 /* =====================================================
-   HOME
+   MAIN
 ===================================================== */
 
 export default function Home() {
-  /* ===================================================
-     THEME
-  =================================================== */
-
   const [theme, setTheme] =
     useState("dark");
-
-  /* ===================================================
-     FILES
-  =================================================== */
 
   const [files, setFiles] =
     useState([]);
 
   const [dragActive, setDragActive] =
     useState(false);
-
-  /* ===================================================
-     UPLOAD
-  =================================================== */
 
   const [uploading, setUploading] =
     useState(false);
@@ -196,10 +180,6 @@ export default function Home() {
   const [uploadStage, setUploadStage] =
     useState("");
 
-  /* ===================================================
-     TRANSFER
-  =================================================== */
-
   const [transferCode, setTransferCode] =
     useState("");
 
@@ -208,10 +188,6 @@ export default function Home() {
 
   const [remainingSeconds, setRemainingSeconds] =
     useState(0);
-
-  /* ===================================================
-     DOWNLOAD
-  =================================================== */
 
   const [receiveCode, setReceiveCode] =
     useState("");
@@ -228,10 +204,6 @@ export default function Home() {
   const [downloadTotal, setDownloadTotal] =
     useState(0);
 
-  /* ===================================================
-     UI
-  =================================================== */
-
   const [message, setMessage] =
     useState("");
 
@@ -241,16 +213,8 @@ export default function Home() {
   const [origin, setOrigin] =
     useState("");
 
-  /* ===================================================
-     LIVE USERS
-  =================================================== */
-
   const [liveUsers, setLiveUsers] =
     useState(0);
-
-  /* ===================================================
-     REFS
-  =================================================== */
 
   const fileInputRef =
     useRef(null);
@@ -273,22 +237,16 @@ export default function Home() {
       );
 
     if (
-      savedTheme ===
-        "dark" ||
-      savedTheme ===
-        "light"
+      savedTheme === "dark" ||
+      savedTheme === "light"
     ) {
-      setTheme(
-        savedTheme
-      );
+      setTheme(savedTheme);
     }
 
     const visitorId =
       getVisitorId();
 
-    /* -----------------------------
-       ANALYTICS
-    ----------------------------- */
+    /* ANALYTICS */
 
     const recordVisitor =
       async () => {
@@ -305,9 +263,7 @@ export default function Home() {
               }
             );
 
-          if (
-            visitorError
-          ) {
+          if (visitorError) {
             console.error(
               "Visitor tracking error:",
               visitorError
@@ -323,9 +279,7 @@ export default function Home() {
 
     recordVisitor();
 
-    /* -----------------------------
-       REALTIME PRESENCE
-    ----------------------------- */
+    /* REALTIME PRESENCE */
 
     const channel =
       supabase.channel(
@@ -386,15 +340,13 @@ export default function Home() {
           "SUBSCRIBED"
         ) {
           try {
-            await channel.track(
-              {
-                visitor_id:
-                  visitorId,
+            await channel.track({
+              visitor_id:
+                visitorId,
 
-                online_at:
-                  new Date().toISOString(),
-              }
-            );
+              online_at:
+                new Date().toISOString(),
+            });
 
             updateLiveUsers();
           } catch (err) {
@@ -493,9 +445,7 @@ export default function Home() {
           ? "light"
           : "dark";
 
-      setTheme(
-        next
-      );
+      setTheme(next);
 
       localStorage.setItem(
         "honeyshare-theme",
@@ -517,9 +467,7 @@ export default function Home() {
       setError("");
       setMessage("");
 
-      if (
-        !selected.length
-      ) {
+      if (!selected.length) {
         return;
       }
 
@@ -577,7 +525,7 @@ export default function Home() {
     };
 
   /* =====================================================
-     SELECT FILES
+     FILE SELECT
   ===================================================== */
 
   const handleFileSelect =
@@ -588,7 +536,7 @@ export default function Home() {
     };
 
   /* =====================================================
-     REMOVE SELECTED FILE
+     REMOVE FILE
   ===================================================== */
 
   const removeFile =
@@ -610,10 +558,6 @@ export default function Home() {
       setError("");
       setMessage("");
 
-      /*
-        Reset native input so the same file
-        can be selected again later.
-      */
       if (
         fileInputRef.current
       ) {
@@ -736,7 +680,7 @@ export default function Home() {
     };
 
   /* =====================================================
-     ANONYMOUS ACCESS TOKEN
+     ANONYMOUS TOKEN
   ===================================================== */
 
   const ensureAnonymousAccessToken =
@@ -940,7 +884,7 @@ export default function Home() {
     };
 
   /* =====================================================
-     SIGNED URL FALLBACK
+     SIGNED UPLOAD FALLBACK
   ===================================================== */
 
   const uploadToSignedUrlFallback =
@@ -1397,7 +1341,7 @@ export default function Home() {
     };
 
   /* =====================================================
-     SELECTED SIZE
+     TOTAL SIZE
   ===================================================== */
 
   const totalSelectedSize =
@@ -1432,9 +1376,11 @@ export default function Home() {
 
           <div className="brand">
 
-            <div className="logo-mark">
-              H
-            </div>
+            <img
+              src="/honeyshare.svg"
+              alt="HoneyShare"
+              className="brand-logo-image"
+            />
 
             <div>
 
@@ -1638,7 +1584,7 @@ export default function Home() {
                           key={`${item.name}-${item.lastModified}-${index}`}
                         >
 
-                          <span>
+                          <span className="file-check">
                             ✓
                           </span>
 
@@ -1658,10 +1604,9 @@ export default function Home() {
                             )}
                           </small>
 
-                          {/* REMOVE */}
-
                           <button
                             type="button"
+                            className="remove-file-button"
                             aria-label={`Remove ${item.name}`}
                             title="Remove file"
                             onClick={() =>
@@ -1669,34 +1614,6 @@ export default function Home() {
                                 index
                               )
                             }
-                            style={{
-                              width:
-                                "26px",
-                              height:
-                                "26px",
-                              padding:
-                                0,
-                              border:
-                                "0",
-                              borderRadius:
-                                "8px",
-                              background:
-                                "rgba(240, 80, 90, 0.08)",
-                              color:
-                                "#e66a73",
-                              display:
-                                "grid",
-                              placeItems:
-                                "center",
-                              fontSize:
-                                "18px",
-                              lineHeight:
-                                1,
-                              fontWeight:
-                                700,
-                              cursor:
-                                "pointer",
-                            }}
                           >
                             ×
                           </button>
@@ -1723,10 +1640,7 @@ export default function Home() {
                       </span>
 
                       <strong>
-                        {
-                          uploadProgress
-                        }
-                        %
+                        {uploadProgress}%
                       </strong>
 
                     </div>
@@ -1789,7 +1703,7 @@ export default function Home() {
 
             ) : (
 
-              /* UPLOADED STATE */
+              /* UPLOADED */
 
               <div className="success-area">
 
@@ -1839,9 +1753,7 @@ export default function Home() {
                     <div className="transfer-code-box">
 
                       <span className="transfer-code">
-                        {
-                          transferCode
-                        }
+                        {transferCode}
                       </span>
 
                     </div>
@@ -1979,8 +1891,6 @@ export default function Home() {
 
             </div>
 
-            {/* DOWNLOAD PROGRESS */}
-
             {downloading && (
 
               <div className="download-progress-panel">
@@ -1992,10 +1902,7 @@ export default function Home() {
                   </span>
 
                   <strong>
-                    {
-                      downloadProgress
-                    }
-                    %
+                    {downloadProgress}%
                   </strong>
 
                 </div>
