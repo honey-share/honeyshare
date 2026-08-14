@@ -22,36 +22,113 @@ const supabase = createClient(
   SUPABASE_KEY
 );
 
+/* =====================================================
+   ANALYTICS
+===================================================== */
+
+const VISITOR_STORAGE_KEY =
+  "honeyshare-visitor-id";
+
+const PRESENCE_CHANNEL =
+  "honeyshare-live-users";
+
+function getVisitorId() {
+  try {
+    let visitorId =
+      localStorage.getItem(
+        VISITOR_STORAGE_KEY
+      );
+
+    if (!visitorId) {
+      visitorId =
+        typeof crypto !== "undefined" &&
+        crypto.randomUUID
+          ? crypto.randomUUID()
+          : `visitor-${Date.now()}-${Math.random()
+              .toString(36)
+              .slice(2, 12)}`;
+
+      localStorage.setItem(
+        VISITOR_STORAGE_KEY,
+        visitorId
+      );
+    }
+
+    return visitorId;
+  } catch {
+    return `visitor-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 12)}`;
+  }
+}
+
+/* =====================================================
+   HOME
+===================================================== */
+
 export default function Home() {
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] =
+    useState("dark");
 
-  const [file, setFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
+  const [file, setFile] =
+    useState(null);
 
-  const [transferCode, setTransferCode] = useState("");
-  const [expiresAt, setExpiresAt] = useState(null);
-  const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [uploading, setUploading] =
+    useState(false);
 
-  const [receiveCode, setReceiveCode] = useState("");
-  const [downloading, setDownloading] = useState(false);
+  const [transferCode, setTransferCode] =
+    useState("");
 
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [expiresAt, setExpiresAt] =
+    useState(null);
 
-  const [origin, setOrigin] = useState("");
+  const [remainingSeconds, setRemainingSeconds] =
+    useState(0);
 
-  const fileInputRef = useRef(null);
-  const qrAttempted = useRef(false);
+  const [receiveCode, setReceiveCode] =
+    useState("");
 
-  /* =========================
-     INITIAL
-  ========================= */
+  const [downloading, setDownloading] =
+    useState(false);
+
+  const [message, setMessage] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
+
+  const [origin, setOrigin] =
+    useState("");
+
+  const fileInputRef =
+    useRef(null);
+
+  const qrAttempted =
+    useRef(false);
+
+  /* =====================================================
+     ANALYTICS REFS
+  ===================================================== */
+
+  const visitorIdRef =
+    useRef(null);
+
+  const presenceChannelRef =
+    useRef(null);
+
+  /* =====================================================
+     INITIAL + ANALYTICS
+  ===================================================== */
 
   useEffect(() => {
-    setOrigin(window.location.origin);
+    setOrigin(
+      window.location.origin
+    );
 
     const savedTheme =
-      localStorage.getItem("honeyshare-theme");
+      localStorage.getItem(
+        "honeyshare-theme"
+      );
 
     if (
       savedTheme === "dark" ||
@@ -59,15 +136,143 @@ export default function Home() {
     ) {
       setTheme(savedTheme);
     }
+
+    /*
+      Create/get anonymous visitor ID.
+      Same browser keeps the same ID.
+    */
+    const visitorId =
+      getVisitorId();
+
+    visitorIdRef.current =
+      visitorId;
+
+    /*
+      Record visitor in Supabase.
+      This updates:
+      - first_seen
+      - last_seen
+      - today's visitor record
+    */
+    const recordVisitor =
+      async () => {
+        try {
+          const { error } =
+            await supabase.rpc(
+              "record_visitor",
+              {
+                p_visitor_id:
+                  visitorId,
+              }
+            );
+
+          if (error) {
+            console.error(
+              "Analytics visitor error:",
+              error
+            );
+          }
+        } catch (err) {
+          console.error(
+            "Analytics error:",
+            err
+          );
+        }
+      };
+
+    recordVisitor();
+
+    /*
+      Supabase Realtime Presence.
+
+      Every open active website tab
+      is one live presence.
+
+      The dashboard will later use
+      presenceState() to count them.
+    */
+    const channel =
+      supabase.channel(
+        PRESENCE_CHANNEL,
+        {
+          config: {
+            presence: {
+              key: visitorId,
+            },
+          },
+        }
+      );
+
+    presenceChannelRef.current =
+      channel;
+
+    channel
+      .on(
+        "presence",
+        {
+          event: "sync",
+        },
+        () => {
+          /*
+            We intentionally don't display
+            the count on the public page.
+
+            Admin analytics dashboard will
+            read this same Presence channel.
+          */
+        }
+      )
+      .subscribe(
+        async (status) => {
+          if (
+            status ===
+            "SUBSCRIBED"
+          ) {
+            try {
+              await channel.track({
+                visitor_id:
+                  visitorId,
+
+                online_at:
+                  new Date().toISOString(),
+              });
+            } catch (err) {
+              console.error(
+                "Presence track error:",
+                err
+              );
+            }
+          }
+        }
+      );
+
+    /*
+      Cleanup when page/tab is closed
+      or component unmounts.
+    */
+    return () => {
+      if (
+        presenceChannelRef.current
+      ) {
+        supabase.removeChannel(
+          presenceChannelRef.current
+        );
+
+        presenceChannelRef.current =
+          null;
+      }
+    };
   }, []);
 
-  /* =========================
+  /* =====================================================
      THEME
-  ========================= */
+  ===================================================== */
 
   const toggleTheme = () => {
     const newTheme =
-      theme === "dark" ? "light" : "dark";
+      theme === "dark"
+        ? "light"
+        : "dark";
 
     setTheme(newTheme);
 
@@ -77,13 +282,20 @@ export default function Home() {
     );
   };
 
-  /* =========================
+  /* =====================================================
      FILE SIZE
-  ========================= */
+  ===================================================== */
 
-  const formatFileSize = (bytes) => {
-    if (bytes < 1024 * 1024) {
-      return `${(bytes / 1024).toFixed(1)} KB`;
+  const formatFileSize = (
+    bytes
+  ) => {
+    if (
+      bytes <
+      1024 * 1024
+    ) {
+      return `${(
+        bytes / 1024
+      ).toFixed(1)} KB`;
     }
 
     return `${(
@@ -92,9 +304,9 @@ export default function Home() {
     ).toFixed(2)} MB`;
   };
 
-  /* =========================
+  /* =====================================================
      TIMER
-  ========================= */
+  ===================================================== */
 
   useEffect(() => {
     if (!expiresAt) {
@@ -102,347 +314,421 @@ export default function Home() {
       return;
     }
 
-    const updateTimer = () => {
-      const remaining = Math.max(
-        0,
-        new Date(expiresAt).getTime() -
-          Date.now()
-      );
+    const updateTimer =
+      () => {
+        const remaining =
+          Math.max(
+            0,
+            new Date(
+              expiresAt
+            ).getTime() -
+              Date.now()
+          );
 
-      const seconds = Math.ceil(
-        remaining / 1000
-      );
+        const seconds =
+          Math.ceil(
+            remaining / 1000
+          );
 
-      setRemainingSeconds(seconds);
-
-      if (seconds <= 0) {
-        setTransferCode("");
-        setExpiresAt(null);
-
-        setMessage(
-          "Transfer expired. The file will be removed automatically."
+        setRemainingSeconds(
+          seconds
         );
-      }
-    };
+
+        if (
+          seconds <= 0
+        ) {
+          setTransferCode("");
+          setExpiresAt(null);
+
+          setMessage(
+            "Transfer expired. The file will be removed automatically."
+          );
+        }
+      };
 
     updateTimer();
 
-    const interval = setInterval(
-      updateTimer,
-      1000
-    );
+    const interval =
+      setInterval(
+        updateTimer,
+        1000
+      );
 
-    return () => clearInterval(interval);
+    return () =>
+      clearInterval(
+        interval
+      );
   }, [expiresAt]);
 
-  const formatTime = () => {
-    const minutes = Math.floor(
-      remainingSeconds / 60
-    );
+  const formatTime =
+    () => {
+      const minutes =
+        Math.floor(
+          remainingSeconds /
+            60
+        );
 
-    const seconds =
-      remainingSeconds % 60;
+      const seconds =
+        remainingSeconds %
+        60;
 
-    return `${String(minutes).padStart(
-      2,
-      "0"
-    )}:${String(seconds).padStart(
-      2,
-      "0"
-    )}`;
-  };
+      return `${String(
+        minutes
+      ).padStart(
+        2,
+        "0"
+      )}:${String(
+        seconds
+      ).padStart(
+        2,
+        "0"
+      )}`;
+    };
 
-  /* =========================
+  /* =====================================================
      SELECT FILE
-  ========================= */
+  ===================================================== */
 
-  const handleFileSelect = (event) => {
-    setError("");
-    setMessage("");
+  const handleFileSelect =
+    (event) => {
+      setError("");
+      setMessage("");
 
-    const selected =
-      event.target.files?.[0];
+      const selected =
+        event.target.files?.[0];
 
-    if (!selected) return;
+      if (!selected)
+        return;
 
-    if (
-      selected.size >
-      MAX_FILE_SIZE
-    ) {
-      setFile(null);
+      if (
+        selected.size >
+        MAX_FILE_SIZE
+      ) {
+        setFile(null);
 
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+        if (
+          fileInputRef.current
+        ) {
+          fileInputRef.current.value =
+            "";
+        }
+
+        setError(
+          "Maximum file size is 50 MB."
+        );
+
+        return;
       }
 
-      setError(
-        "Maximum file size is 50 MB."
-      );
+      setFile(selected);
+    };
 
-      return;
-    }
-
-    setFile(selected);
-  };
-
-  /* =========================
+  /* =====================================================
      UPLOAD
-  ========================= */
+  ===================================================== */
 
-  const uploadFile = async () => {
-    if (!file || uploading) return;
+  const uploadFile =
+    async () => {
+      if (
+        !file ||
+        uploading
+      )
+        return;
 
-    setUploading(true);
-    setError("");
-    setMessage("");
+      setUploading(true);
+      setError("");
+      setMessage("");
 
-    try {
-      const initResponse =
-        await fetch(
-          FUNCTION_URL,
-          {
-            method: "POST",
+      try {
+        const initResponse =
+          await fetch(
+            FUNCTION_URL,
+            {
+              method: "POST",
 
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
 
-            body: JSON.stringify({
-              action: "init-upload",
-              fileName: file.name,
-              fileSize: file.size,
-              mimeType:
-                file.type ||
-                "application/octet-stream"
-            })
-          }
-        );
+              body: JSON.stringify({
+                action:
+                  "init-upload",
 
-      const initData =
-        await initResponse.json();
+                fileName:
+                  file.name,
 
-      if (!initResponse.ok) {
-        throw new Error(
-          initData.error ||
-            "Unable to create transfer."
-        );
-      }
+                fileSize:
+                  file.size,
 
-      const {
-        error: uploadError
-      } =
-        await supabase.storage
-          .from("temporary-files")
-          .uploadToSignedUrl(
-            initData.path,
-            initData.token,
-            file
+                mimeType:
+                  file.type ||
+                  "application/octet-stream",
+              }),
+            }
           );
 
-      if (uploadError) {
-        throw uploadError;
-      }
+        const initData =
+          await initResponse.json();
 
-      const activateResponse =
-        await fetch(
-          FUNCTION_URL,
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-
-            body: JSON.stringify({
-              action:
-                "activate-upload",
-              code:
-                initData.code
-            })
-          }
-        );
-
-      const activateData =
-        await activateResponse.json();
-
-      if (!activateResponse.ok) {
-        throw new Error(
-          activateData.error ||
-            "Unable to activate transfer."
-        );
-      }
-
-      setTransferCode(
-        initData.code
-      );
-
-      setExpiresAt(
-        initData.expiresAt
-      );
-
-      setRemainingSeconds(
-        TRANSFER_SECONDS
-      );
-
-      setMessage(
-        "File uploaded successfully."
-      );
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        err?.message ||
-          "Upload failed. Please try again."
-      );
-
-      setTransferCode("");
-      setExpiresAt(null);
-      setRemainingSeconds(0);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  /* =========================
-     DOWNLOAD
-  ========================= */
-
-  const downloadFile = async (
-    suppliedCode = ""
-  ) => {
-    const code =
-      suppliedCode ||
-      receiveCode;
-
-    if (
-      !/^\d{5}$/.test(code) ||
-      downloading
-    ) {
-      return;
-    }
-
-    setDownloading(true);
-    setError("");
-    setMessage("");
-
-    try {
-      const response =
-        await fetch(
-          FUNCTION_URL,
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-
-            body: JSON.stringify({
-              action:
-                "prepare-download",
-              code
-            })
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "File not found."
-        );
-      }
-
-      const fileResponse =
-        await fetch(data.url);
-
-      if (!fileResponse.ok) {
-        throw new Error(
-          "Unable to download file."
-        );
-      }
-
-      const blob =
-        await fileResponse.blob();
-
-      const blobUrl =
-        URL.createObjectURL(blob);
-
-      const link =
-        document.createElement("a");
-
-      link.href = blobUrl;
-
-      link.download =
-        data.fileName ||
-        "HoneyShare-file";
-
-      document.body.appendChild(link);
-
-      link.click();
-
-      link.remove();
-
-      setTimeout(() => {
-        URL.revokeObjectURL(
-          blobUrl
-        );
-      }, 1000);
-
-      await fetch(
-        FUNCTION_URL,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
-
-          body: JSON.stringify({
-            action:
-              "complete-download",
-            id: data.id
-          })
+        if (
+          !initResponse.ok
+        ) {
+          throw new Error(
+            initData.error ||
+              "Unable to create transfer."
+          );
         }
-      );
 
-      setReceiveCode("");
+        const {
+          error:
+            uploadError,
+        } =
+          await supabase.storage
+            .from(
+              "temporary-files"
+            )
+            .uploadToSignedUrl(
+              initData.path,
+              initData.token,
+              file
+            );
 
-      setMessage(
-        "Download complete. File deleted automatically."
-      );
-    } catch (err) {
-      console.error(err);
+        if (uploadError) {
+          throw uploadError;
+        }
 
-      setError(
-        err?.message ||
-          "Download failed."
-      );
-    } finally {
-      setDownloading(false);
-    }
-  };
+        const activateResponse =
+          await fetch(
+            FUNCTION_URL,
+            {
+              method: "POST",
 
-  /* =========================
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body: JSON.stringify({
+                action:
+                  "activate-upload",
+
+                code:
+                  initData.code,
+              }),
+            }
+          );
+
+        const activateData =
+          await activateResponse.json();
+
+        if (
+          !activateResponse.ok
+        ) {
+          throw new Error(
+            activateData.error ||
+              "Unable to activate transfer."
+          );
+        }
+
+        setTransferCode(
+          initData.code
+        );
+
+        setExpiresAt(
+          initData.expiresAt
+        );
+
+        setRemainingSeconds(
+          TRANSFER_SECONDS
+        );
+
+        setMessage(
+          "File uploaded successfully."
+        );
+      } catch (err) {
+        console.error(err);
+
+        setError(
+          err?.message ||
+            "Upload failed. Please try again."
+        );
+
+        setTransferCode("");
+        setExpiresAt(null);
+        setRemainingSeconds(0);
+      } finally {
+        setUploading(false);
+      }
+    };
+
+  /* =====================================================
+     DOWNLOAD
+  ===================================================== */
+
+  const downloadFile =
+    async (
+      suppliedCode = ""
+    ) => {
+      const code =
+        suppliedCode ||
+        receiveCode;
+
+      if (
+        !/^\d{5}$/.test(
+          code
+        ) ||
+        downloading
+      ) {
+        return;
+      }
+
+      setDownloading(true);
+      setError("");
+      setMessage("");
+
+      try {
+        const response =
+          await fetch(
+            FUNCTION_URL,
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body: JSON.stringify({
+                action:
+                  "prepare-download",
+
+                code,
+              }),
+            }
+          );
+
+        const data =
+          await response.json();
+
+        if (
+          !response.ok
+        ) {
+          throw new Error(
+            data.error ||
+              "File not found."
+          );
+        }
+
+        const fileResponse =
+          await fetch(
+            data.url
+          );
+
+        if (
+          !fileResponse.ok
+        ) {
+          throw new Error(
+            "Unable to download file."
+          );
+        }
+
+        const blob =
+          await fileResponse.blob();
+
+        const blobUrl =
+          URL.createObjectURL(
+            blob
+          );
+
+        const link =
+          document.createElement(
+            "a"
+          );
+
+        link.href =
+          blobUrl;
+
+        link.download =
+          data.fileName ||
+          "HoneyShare-file";
+
+        document.body.appendChild(
+          link
+        );
+
+        link.click();
+
+        link.remove();
+
+        setTimeout(
+          () => {
+            URL.revokeObjectURL(
+              blobUrl
+            );
+          },
+          1000
+        );
+
+        /*
+          Tell Edge Function that the
+          download completed so the file
+          can be deleted.
+        */
+        await fetch(
+          FUNCTION_URL,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              action:
+                "complete-download",
+
+              id: data.id,
+            }),
+          }
+        );
+
+        setReceiveCode("");
+
+        setMessage(
+          "Download complete. File deleted automatically."
+        );
+      } catch (err) {
+        console.error(err);
+
+        setError(
+          err?.message ||
+            "Download failed."
+        );
+      } finally {
+        setDownloading(false);
+      }
+    };
+
+  /* =====================================================
      QR
-  ========================= */
+  ===================================================== */
 
   const qrValue =
-    origin && transferCode
+    origin &&
+    transferCode
       ? `${origin}/?code=${transferCode}`
       : "";
 
-  /* =========================
+  /* =====================================================
      QR AUTO DOWNLOAD
-  ========================= */
+  ===================================================== */
 
   useEffect(() => {
-    if (qrAttempted.current) {
+    if (
+      qrAttempted.current
+    ) {
       return;
     }
 
@@ -456,52 +742,76 @@ export default function Home() {
 
     if (
       code &&
-      /^\d{5}$/.test(code)
+      /^\d{5}$/.test(
+        code
+      )
     ) {
-      qrAttempted.current = true;
+      qrAttempted.current =
+        true;
 
-      setReceiveCode(code);
+      setReceiveCode(
+        code
+      );
 
       setMessage(
         "Transfer found. Starting download..."
       );
 
       const timer =
-        setTimeout(() => {
-          downloadFile(code);
-        }, 700);
+        setTimeout(
+          () => {
+            downloadFile(
+              code
+            );
+          },
+          700
+        );
 
       return () =>
-        clearTimeout(timer);
+        clearTimeout(
+          timer
+        );
     }
   }, []);
 
-  /* =========================
+  /* =====================================================
      RESET
-  ========================= */
+  ===================================================== */
 
-  const resetUpload = () => {
-    setFile(null);
-    setTransferCode("");
-    setExpiresAt(null);
-    setRemainingSeconds(0);
-    setMessage("");
-    setError("");
+  const resetUpload =
+    () => {
+      setFile(null);
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
+      setTransferCode("");
 
-  /* =========================
+      setExpiresAt(null);
+
+      setRemainingSeconds(
+        0
+      );
+
+      setMessage("");
+
+      setError("");
+
+      if (
+        fileInputRef.current
+      ) {
+        fileInputRef.current.value =
+          "";
+      }
+    };
+
+  /* =====================================================
      UI
-  ========================= */
+  ===================================================== */
 
   return (
     <main
       className={`page ${theme}`}
     >
       <div className="background-glow glow-one" />
+
       <div className="background-glow glow-two" />
 
       <section className="container">
@@ -517,6 +827,7 @@ export default function Home() {
             </div>
 
             <div>
+
               <h1>
                 HoneyShare
               </h1>
@@ -524,6 +835,7 @@ export default function Home() {
               <p>
                 Fast. Simple. Temporary.
               </p>
+
             </div>
 
           </div>
@@ -531,10 +843,13 @@ export default function Home() {
           <button
             type="button"
             className="theme-toggle"
-            onClick={toggleTheme}
+            onClick={
+              toggleTheme
+            }
             aria-label="Toggle theme"
           >
-            {theme === "dark"
+            {theme ===
+            "dark"
               ? "☀️"
               : "🌙"}
           </button>
@@ -562,7 +877,7 @@ export default function Home() {
 
         </section>
 
-        {/* CARDS */}
+        {/* TRANSFER CARDS */}
 
         <div className="transfer-grid">
 
@@ -573,6 +888,7 @@ export default function Home() {
             <div className="card-top">
 
               <div>
+
                 <span className="eyebrow">
                   SEND
                 </span>
@@ -580,6 +896,7 @@ export default function Home() {
                 <h3>
                   Upload a file
                 </h3>
+
               </div>
 
               <div className="icon-circle upload-icon">
@@ -591,10 +908,13 @@ export default function Home() {
             {!transferCode ? (
 
               <>
+
                 <label className="drop-zone">
 
                   <input
-                    ref={fileInputRef}
+                    ref={
+                      fileInputRef
+                    }
                     type="file"
                     hidden
                     onChange={
@@ -607,9 +927,13 @@ export default function Home() {
                   </div>
 
                   {file ? (
+
                     <>
+
                       <strong
-                        title={file.name}
+                        title={
+                          file.name
+                        }
                       >
                         {file.name}
                       </strong>
@@ -619,9 +943,13 @@ export default function Home() {
                           file.size
                         )}
                       </span>
+
                     </>
+
                   ) : (
+
                     <>
+
                       <strong>
                         Choose a file
                       </strong>
@@ -629,7 +957,9 @@ export default function Home() {
                       <span>
                         Click here to browse your device
                       </span>
+
                     </>
+
                   )}
 
                   <small>
@@ -639,6 +969,7 @@ export default function Home() {
                 </label>
 
                 {uploading && (
+
                   <div className="uploading-state">
 
                     <span className="upload-spinner" />
@@ -648,6 +979,7 @@ export default function Home() {
                     </span>
 
                   </div>
+
                 )}
 
                 <button
@@ -661,6 +993,7 @@ export default function Home() {
                     uploadFile
                   }
                 >
+
                   {uploading
                     ? "Uploading..."
                     : "Upload File"}
@@ -670,7 +1003,9 @@ export default function Home() {
                       →
                     </span>
                   )}
+
                 </button>
+
               </>
 
             ) : (
@@ -721,10 +1056,13 @@ export default function Home() {
                     </div>
 
                     <div className="expiry">
+
                       Expires in{" "}
+
                       <strong>
                         {formatTime()}
                       </strong>
+
                     </div>
 
                     <button
@@ -748,14 +1086,20 @@ export default function Home() {
                     <div className="qr-box">
 
                       {qrValue && (
+
                         <QRCodeCanvas
-                          value={qrValue}
+                          value={
+                            qrValue
+                          }
                           size={180}
                           bgColor="#ffffff"
                           fgColor="#111827"
                           level="M"
-                          includeMargin={true}
+                          includeMargin={
+                            true
+                          }
                         />
+
                       )}
 
                     </div>
@@ -769,6 +1113,7 @@ export default function Home() {
                 </div>
 
               </div>
+
             )}
 
           </section>
@@ -810,9 +1155,15 @@ export default function Home() {
                 autoComplete="off"
                 maxLength={5}
                 placeholder="00000"
-                value={receiveCode}
-                onChange={(event) => {
+                value={
+                  receiveCode
+                }
+                onChange={(
+                  event
+                ) => {
+
                   setError("");
+
                   setMessage("");
 
                   setReceiveCode(
@@ -826,6 +1177,7 @@ export default function Home() {
                         5
                       )
                   );
+
                 }}
               />
 
@@ -839,13 +1191,15 @@ export default function Home() {
               type="button"
               className="secondary-button"
               disabled={
-                receiveCode.length !== 5 ||
+                receiveCode.length !==
+                  5 ||
                 downloading
               }
               onClick={() =>
                 downloadFile()
               }
             >
+
               {downloading
                 ? "Downloading..."
                 : "Find File"}
@@ -853,6 +1207,7 @@ export default function Home() {
               <span>
                 →
               </span>
+
             </button>
 
           </section>
@@ -861,7 +1216,9 @@ export default function Home() {
 
         {/* STATUS */}
 
-        {(message || error) && (
+        {(message ||
+          error) && (
+
           <div
             className={`status-message ${
               error
@@ -869,8 +1226,12 @@ export default function Home() {
                 : "success"
             }`}
           >
-            {error || message}
+            {
+              error ||
+              message
+            }
           </div>
+
         )}
 
         {/* FEATURES */}
@@ -878,24 +1239,33 @@ export default function Home() {
         <div className="info-row">
 
           <div>
+
             <span className="info-icon">
               ⚡
             </span>
+
             Quick transfer
+
           </div>
 
           <div>
+
             <span className="info-icon">
               🔒
             </span>
+
             Private files
+
           </div>
 
           <div>
+
             <span className="info-icon">
               ⌛
             </span>
+
             Auto deleted
+
           </div>
 
         </div>
@@ -931,6 +1301,7 @@ export default function Home() {
         </footer>
 
       </section>
+
     </main>
   );
 }
