@@ -13,16 +13,9 @@ const SUPABASE_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-const FUNCTION_URL =
-  `${SUPABASE_URL}/functions/v1/transfer-v2`;
-
-const MAX_FILE_SIZE =
-  50 * 1024 * 1024;
-
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_FILES = 10;
-
-const TRANSFER_SECONDS =
-  5 * 60;
+const TRANSFER_SECONDS = 5 * 60;
 
 const VISITOR_STORAGE_KEY =
   "honeyshare-visitor-id";
@@ -30,25 +23,66 @@ const VISITOR_STORAGE_KEY =
 const PRESENCE_CHANNEL =
   "honeyshare-live-users";
 
-const supabase =
-  createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-  );
+const supabase = createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
 
 /* =====================================================
-   HELPERS
+   EDGE FUNCTION HELPER
+===================================================== */
+
+async function callTransferFunction(
+  action,
+  payload = {}
+) {
+  const {
+    data,
+    error,
+  } = await supabase.functions.invoke(
+    "transfer-v2",
+    {
+      body: {
+        action,
+        ...payload,
+      },
+    }
+  );
+
+  if (error) {
+    console.error(
+      "transfer-v2 error:",
+      error
+    );
+
+    throw new Error(
+      error.message ||
+        "Unable to contact HoneyShare server."
+    );
+  }
+
+  if (data?.error) {
+    throw new Error(
+      data.error
+    );
+  }
+
+  return data;
+}
+
+/* =====================================================
+   VISITOR ID
 ===================================================== */
 
 function getVisitorId() {
   try {
-    let id =
+    let visitorId =
       localStorage.getItem(
         VISITOR_STORAGE_KEY
       );
 
-    if (!id) {
-      id =
+    if (!visitorId) {
+      visitorId =
         typeof crypto !==
           "undefined" &&
         crypto.randomUUID
@@ -59,17 +93,21 @@ function getVisitorId() {
 
       localStorage.setItem(
         VISITOR_STORAGE_KEY,
-        id
+        visitorId
       );
     }
 
-    return id;
+    return visitorId;
   } catch {
     return `visitor-${Date.now()}-${Math.random()
       .toString(36)
       .slice(2, 10)}`;
   }
 }
+
+/* =====================================================
+   HELPERS
+===================================================== */
 
 function formatBytes(bytes) {
   if (!bytes) return "0 B";
@@ -109,17 +147,13 @@ function formatTime(seconds) {
   ).padStart(2, "0")}`;
 }
 
-export default function Home() {
-  /* =====================================================
-     THEME
-  ===================================================== */
+/* =====================================================
+   HOME
+===================================================== */
 
+export default function Home() {
   const [theme, setTheme] =
     useState("dark");
-
-  /* =====================================================
-     FILES
-  ===================================================== */
 
   const [files, setFiles] =
     useState([]);
@@ -136,10 +170,6 @@ export default function Home() {
   const [uploadStage, setUploadStage] =
     useState("");
 
-  /* =====================================================
-     TRANSFER
-  ===================================================== */
-
   const [transferCode, setTransferCode] =
     useState("");
 
@@ -148,10 +178,6 @@ export default function Home() {
 
   const [remainingSeconds, setRemainingSeconds] =
     useState(0);
-
-  /* =====================================================
-     RECEIVE
-  ===================================================== */
 
   const [receiveCode, setReceiveCode] =
     useState("");
@@ -167,10 +193,6 @@ export default function Home() {
 
   const [downloadTotal, setDownloadTotal] =
     useState(0);
-
-  /* =====================================================
-     UI
-  ===================================================== */
 
   const [message, setMessage] =
     useState("");
@@ -214,21 +236,30 @@ export default function Home() {
     const visitorId =
       getVisitorId();
 
-    /* ANALYTICS */
+    /* Visitor analytics */
 
     const recordVisitor =
       async () => {
         try {
-          await supabase.rpc(
+          const {
+            error: visitorError,
+          } = await supabase.rpc(
             "record_visitor",
             {
               p_visitor_id:
                 visitorId,
             }
           );
+
+          if (visitorError) {
+            console.error(
+              "Visitor tracking error:",
+              visitorError
+            );
+          }
         } catch (err) {
           console.error(
-            "Visitor tracking:",
+            "Visitor tracking error:",
             err
           );
         }
@@ -236,7 +267,7 @@ export default function Home() {
 
     recordVisitor();
 
-    /* LIVE USERS */
+    /* Live users */
 
     const channel =
       supabase.channel(
@@ -295,15 +326,22 @@ export default function Home() {
           status ===
           "SUBSCRIBED"
         ) {
-          await channel.track({
-            visitor_id:
-              visitorId,
+          try {
+            await channel.track({
+              visitor_id:
+                visitorId,
 
-            online_at:
-              new Date().toISOString(),
-          });
+              online_at:
+                new Date().toISOString(),
+            });
 
-          updateLiveUsers();
+            updateLiveUsers();
+          } catch (err) {
+            console.error(
+              "Presence error:",
+              err
+            );
+          }
         }
       }
     );
@@ -323,25 +361,6 @@ export default function Home() {
   }, []);
 
   /* =====================================================
-     THEME
-  ===================================================== */
-
-  const toggleTheme =
-    () => {
-      const next =
-        theme === "dark"
-          ? "light"
-          : "dark";
-
-      setTheme(next);
-
-      localStorage.setItem(
-        "honeyshare-theme",
-        next
-      );
-    };
-
-  /* =====================================================
      TIMER
   ===================================================== */
 
@@ -354,7 +373,7 @@ export default function Home() {
       return;
     }
 
-    const update =
+    const updateTimer =
       () => {
         const remaining =
           Math.max(
@@ -386,11 +405,11 @@ export default function Home() {
         }
       };
 
-    update();
+    updateTimer();
 
     const interval =
       setInterval(
-        update,
+        updateTimer,
         1000
       );
 
@@ -401,22 +420,40 @@ export default function Home() {
   }, [expiresAt]);
 
   /* =====================================================
-     VALIDATE FILES
+     THEME
+  ===================================================== */
+
+  const toggleTheme = () => {
+    const next =
+      theme === "dark"
+        ? "light"
+        : "dark";
+
+    setTheme(next);
+
+    localStorage.setItem(
+      "honeyshare-theme",
+      next
+    );
+  };
+
+  /* =====================================================
+     FILE VALIDATION
   ===================================================== */
 
   const validateFiles =
     (incoming) => {
       const selected =
         Array.from(
-          incoming
+          incoming || []
         );
+
+      setError("");
+      setMessage("");
 
       if (!selected.length) {
         return;
       }
-
-      setError("");
-      setMessage("");
 
       if (
         selected.length >
@@ -436,15 +473,16 @@ export default function Home() {
           0
         );
 
-      if (
+      const oversized =
         selected.some(
           (item) =>
             item.size >
             MAX_FILE_SIZE
-        )
-      ) {
+        );
+
+      if (oversized) {
         setError(
-          "One of the selected files is larger than 50 MB."
+          "One of the files is larger than the 50 MB limit."
         );
 
         return;
@@ -466,10 +504,6 @@ export default function Home() {
       );
     };
 
-  /* =====================================================
-     FILE INPUT
-  ===================================================== */
-
   const handleFileSelect =
     (event) => {
       validateFiles(
@@ -484,37 +518,28 @@ export default function Home() {
   const handleDragOver =
     (event) => {
       event.preventDefault();
-
-      setDragActive(
-        true
-      );
+      setDragActive(true);
     };
 
   const handleDragLeave =
     (event) => {
       event.preventDefault();
-
-      setDragActive(
-        false
-      );
+      setDragActive(false);
     };
 
   const handleDrop =
     (event) => {
       event.preventDefault();
 
-      setDragActive(
-        false
-      );
+      setDragActive(false);
 
       validateFiles(
-        event.dataTransfer
-          .files
+        event.dataTransfer.files
       );
     };
 
   /* =====================================================
-     PREPARE UPLOAD
+     ZIP
   ===================================================== */
 
   const prepareUploadFile =
@@ -529,7 +554,9 @@ export default function Home() {
         "Preparing ZIP..."
       );
 
-      setUploadProgress(0);
+      setUploadProgress(
+        0
+      );
 
       const zip =
         new JSZip();
@@ -547,14 +574,9 @@ export default function Home() {
         await zip.generateAsync(
           {
             type: "blob",
-
-            compression:
-              "STORE",
-
-            streamFiles:
-              true,
+            compression: "STORE",
+            streamFiles: true,
           },
-
           (metadata) => {
             setUploadProgress(
               Math.round(
@@ -569,7 +591,7 @@ export default function Home() {
         MAX_FILE_SIZE
       ) {
         throw new Error(
-          "The generated ZIP is larger than the 50 MB limit."
+          "Generated ZIP is larger than the 50 MB limit."
         );
       }
 
@@ -598,10 +620,13 @@ export default function Home() {
           resolve,
           reject
         ) => {
-          const projectRef =
+          const hostname =
             new URL(
               SUPABASE_URL
-            ).hostname.split(
+            ).hostname;
+
+          const projectRef =
+            hostname.split(
               "."
             )[0];
 
@@ -655,6 +680,11 @@ export default function Home() {
 
                 onError:
                   (uploadError) => {
+                    console.error(
+                      "TUS upload error:",
+                      uploadError
+                    );
+
                     reject(
                       uploadError
                     );
@@ -714,6 +744,10 @@ export default function Home() {
         0
       );
 
+      setUploadStage(
+        "Starting..."
+      );
+
       setError("");
       setMessage("");
 
@@ -722,53 +756,28 @@ export default function Home() {
           await prepareUploadFile();
 
         setUploadStage(
-          "Starting upload..."
+          "Creating secure transfer..."
         );
 
-        setUploadProgress(
-          0
-        );
-
-        const initResponse =
-          await fetch(
-            FUNCTION_URL,
+        const initData =
+          await callTransferFunction(
+            "init-upload",
             {
-              method:
-                "POST",
+              fileName:
+                uploadFile.name,
 
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
+              fileSize:
+                uploadFile.size,
 
-              body: JSON.stringify({
-                action:
-                  "init-upload",
-
-                fileName:
-                  uploadFile.name,
-
-                fileSize:
-                  uploadFile.size,
-
-                mimeType:
-                  uploadFile.type ||
-                  "application/octet-stream",
-              }),
+              mimeType:
+                uploadFile.type ||
+                "application/octet-stream",
             }
           );
 
-        const initData =
-          await initResponse.json();
-
-        if (
-          !initResponse.ok
-        ) {
-          throw new Error(
-            initData.error ||
-              "Unable to create transfer."
-          );
-        }
+        setUploadStage(
+          "Uploading..."
+        );
 
         await uploadWithProgress(
           uploadFile,
@@ -780,39 +789,13 @@ export default function Home() {
           "Finalizing..."
         );
 
-        const activateResponse =
-          await fetch(
-            FUNCTION_URL,
-            {
-              method:
-                "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-
-              body: JSON.stringify({
-                action:
-                  "activate-upload",
-
-                code:
-                  initData.code,
-              }),
-            }
-          );
-
-        const activateData =
-          await activateResponse.json();
-
-        if (
-          !activateResponse.ok
-        ) {
-          throw new Error(
-            activateData.error ||
-              "Unable to activate transfer."
-          );
-        }
+        await callTransferFunction(
+          "activate-upload",
+          {
+            code:
+              initData.code,
+          }
+        );
 
         setTransferCode(
           initData.code
@@ -838,15 +821,15 @@ export default function Home() {
           "File uploaded successfully."
         );
       } catch (err) {
-        console.error(err);
+        console.error(
+          "Upload error:",
+          err
+        );
 
         setError(
           err?.message ||
             "Upload failed. Please try again."
         );
-
-        setTransferCode("");
-        setExpiresAt(null);
       } finally {
         setUploading(
           false
@@ -855,7 +838,7 @@ export default function Home() {
     };
 
   /* =====================================================
-     DOWNLOAD WITH PROGRESS
+     DOWNLOAD
   ===================================================== */
 
   const downloadFile =
@@ -895,38 +878,13 @@ export default function Home() {
       setMessage("");
 
       try {
-        const prepareResponse =
-          await fetch(
-            FUNCTION_URL,
+        const data =
+          await callTransferFunction(
+            "prepare-download",
             {
-              method:
-                "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-
-              body: JSON.stringify({
-                action:
-                  "prepare-download",
-
-                code,
-              }),
+              code,
             }
           );
-
-        const data =
-          await prepareResponse.json();
-
-        if (
-          !prepareResponse.ok
-        ) {
-          throw new Error(
-            data.error ||
-              "File not found."
-          );
-        }
 
         const response =
           await fetch(
@@ -959,7 +917,8 @@ export default function Home() {
         const chunks =
           [];
 
-        let received = 0;
+        let received =
+          0;
 
         if (
           response.body
@@ -974,7 +933,9 @@ export default function Home() {
             } =
               await reader.read();
 
-            if (done) break;
+            if (done) {
+              break;
+            }
 
             chunks.push(
               value
@@ -987,7 +948,9 @@ export default function Home() {
               received
             );
 
-            if (total > 0) {
+            if (
+              total > 0
+            ) {
               setDownloadProgress(
                 Math.min(
                   100,
@@ -1000,24 +963,6 @@ export default function Home() {
               );
             }
           }
-        } else {
-          const blob =
-            await response.blob();
-
-          chunks.push(
-            blob
-          );
-
-          received =
-            blob.size;
-
-          setDownloadedBytes(
-            received
-          );
-
-          setDownloadProgress(
-            100
-          );
         }
 
         const blob =
@@ -1034,7 +979,7 @@ export default function Home() {
           100
         );
 
-        const blobUrl =
+        const url =
           URL.createObjectURL(
             blob
           );
@@ -1044,8 +989,7 @@ export default function Home() {
             "a"
           );
 
-        link.href =
-          blobUrl;
+        link.href = url;
 
         link.download =
           data.fileName ||
@@ -1062,35 +1006,16 @@ export default function Home() {
         setTimeout(
           () => {
             URL.revokeObjectURL(
-              blobUrl
+              url
             );
           },
           2000
         );
 
-        /*
-          Delete only AFTER the complete
-          file has been downloaded.
-        */
-
-        await fetch(
-          FUNCTION_URL,
+        await callTransferFunction(
+          "complete-download",
           {
-            method:
-              "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body: JSON.stringify({
-              action:
-                "complete-download",
-
-              id:
-                data.id,
-            }),
+            id: data.id,
           }
         );
 
@@ -1100,7 +1025,10 @@ export default function Home() {
           "Download complete. File deleted automatically."
         );
       } catch (err) {
-        console.error(err);
+        console.error(
+          "Download error:",
+          err
+        );
 
         setError(
           err?.message ||
@@ -1114,7 +1042,7 @@ export default function Home() {
     };
 
   /* =====================================================
-     QR LINK
+     QR
   ===================================================== */
 
   const qrValue =
@@ -1146,7 +1074,6 @@ export default function Home() {
       setUploadStage("");
 
       setMessage("");
-
       setError("");
 
       if (
@@ -1157,14 +1084,10 @@ export default function Home() {
       }
     };
 
-  /* =====================================================
-     SELECTED FILE TOTAL
-  ===================================================== */
-
   const totalSelectedSize =
     files.reduce(
-      (sum, item) =>
-        sum + item.size,
+      (sum, file) =>
+        sum + file.size,
       0
     );
 
@@ -1177,12 +1100,9 @@ export default function Home() {
       className={`page ${theme}`}
     >
       <div className="background-glow glow-one" />
-
       <div className="background-glow glow-two" />
 
       <section className="container">
-
-        {/* HEADER */}
 
         <header className="header">
 
@@ -1193,7 +1113,6 @@ export default function Home() {
             </div>
 
             <div>
-
               <h1>
                 HoneyShare
               </h1>
@@ -1201,17 +1120,14 @@ export default function Home() {
               <p>
                 Fast. Simple. Temporary.
               </p>
-
             </div>
 
           </div>
 
           <div className="header-actions">
 
-            <div
-              className="live-users-badge"
-              title="Currently active visitors"
-            >
+            <div className="live-users-badge">
+
               <span className="live-users-dot" />
 
               <strong>
@@ -1221,6 +1137,7 @@ export default function Home() {
               <span>
                 Live
               </span>
+
             </div>
 
             <button
@@ -1239,8 +1156,6 @@ export default function Home() {
           </div>
 
         </header>
-
-        {/* HERO */}
 
         <section className="hero">
 
@@ -1261,13 +1176,11 @@ export default function Home() {
 
         </section>
 
-        {/* TRANSFER */}
-
         <div className="transfer-grid">
 
           {/* SEND */}
 
-          <section className="card send-card">
+          <section className="card">
 
             <div className="card-top">
 
@@ -1328,9 +1241,7 @@ export default function Home() {
 
                   {files.length ===
                   0 ? (
-
                     <>
-
                       <strong>
                         Drop files here
                       </strong>
@@ -1342,13 +1253,9 @@ export default function Home() {
                       <small>
                         Up to 10 files • 50 MB total
                       </small>
-
                     </>
-
                   ) : (
-
                     <>
-
                       <strong>
                         {files.length ===
                         1
@@ -1366,9 +1273,7 @@ export default function Home() {
                       <small>
                         Click to change files
                       </small>
-
                     </>
-
                   )}
 
                 </label>
@@ -1442,15 +1347,11 @@ export default function Home() {
                     <div className="progress-header">
 
                       <span>
-                        {uploadStage ||
-                          "Uploading..."}
+                        {uploadStage}
                       </span>
 
                       <strong>
-                        {
-                          uploadProgress
-                        }
-                        %
+                        {uploadProgress}%
                       </strong>
 
                     </div>
@@ -1488,7 +1389,6 @@ export default function Home() {
                     uploadFiles
                   }
                 >
-
                   {uploading
                     ? `${uploadProgress}%`
                     : files.length >
@@ -1501,7 +1401,6 @@ export default function Home() {
                       →
                     </span>
                   )}
-
                 </button>
 
               </>
@@ -1594,7 +1493,6 @@ export default function Home() {
                     <div className="qr-box">
 
                       {qrValue && (
-
                         <QRCodeCanvas
                           value={
                             qrValue
@@ -1607,13 +1505,12 @@ export default function Home() {
                             true
                           }
                         />
-
                       )}
 
                     </div>
 
                     <span className="qr-hint">
-                      Opens a secure download page
+                      Opens secure download page
                     </span>
 
                   </div>
@@ -1628,7 +1525,7 @@ export default function Home() {
 
           {/* RECEIVE */}
 
-          <section className="card receive-card">
+          <section className="card">
 
             <div className="card-top">
 
@@ -1669,7 +1566,6 @@ export default function Home() {
                 onChange={(
                   event
                 ) => {
-
                   setError("");
                   setMessage("");
 
@@ -1684,7 +1580,6 @@ export default function Home() {
                         5
                       )
                   );
-
                 }}
               />
 
@@ -1768,8 +1663,6 @@ export default function Home() {
 
         </div>
 
-        {/* STATUS */}
-
         {(message ||
           error) && (
 
@@ -1787,8 +1680,6 @@ export default function Home() {
           </div>
 
         )}
-
-        {/* FEATURES */}
 
         <div className="info-row">
 
@@ -1814,8 +1705,6 @@ export default function Home() {
           </div>
 
         </div>
-
-        {/* FOOTER */}
 
         <footer>
 
@@ -1846,7 +1735,6 @@ export default function Home() {
         </footer>
 
       </section>
-
     </main>
   );
 }
