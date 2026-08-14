@@ -39,15 +39,16 @@ async function callTransferFunction(
   const {
     data,
     error,
-  } = await supabase.functions.invoke(
-    "transfer-v2",
-    {
-      body: {
-        action,
-        ...payload,
-      },
-    }
-  );
+  } =
+    await supabase.functions.invoke(
+      "transfer-v2",
+      {
+        body: {
+          action,
+          ...payload,
+        },
+      }
+    );
 
   if (error) {
     console.error(
@@ -261,8 +262,6 @@ export default function Home() {
       window.location.origin
     );
 
-    /* Theme */
-
     const savedTheme =
       localStorage.getItem(
         "honeyshare-theme"
@@ -274,8 +273,6 @@ export default function Home() {
     ) {
       setTheme(savedTheme);
     }
-
-    /* Visitor */
 
     const visitorId =
       getVisitorId();
@@ -676,47 +673,49 @@ export default function Home() {
     };
 
   /* ===================================================
-     TUS UPLOAD WITH SIGNED URL
+     TUS UPLOAD WITH SIGNED TOKEN
+
+     Supabase presigned resumable uploads use the
+     direct storage hostname plus x-signature.
   =================================================== */
 
-  const uploadWithProgress =
-    (
+  const uploadToTusWithProgress =
+    async (
       uploadFile,
-      signedUrl
+      token,
+      accessToken
     ) => {
       return new Promise(
         (
           resolve,
           reject
         ) => {
-          if (
-            !signedUrl
-          ) {
-            reject(
-              new Error(
-                "Missing signed upload URL."
-              )
-            );
+          const hostname =
+            new URL(
+              SUPABASE_URL
+            ).hostname;
 
-            return;
-          }
+          const projectRef =
+            hostname.split(
+              "."
+            )[0];
+
+          const endpoint =
+            `https://${projectRef}.storage.supabase.co/storage/v1/upload/resumable`;
 
           const upload =
             new tus.Upload(
               uploadFile,
               {
-                /*
-                  IMPORTANT:
-                  The Supabase signed URL
-                  is the TUS endpoint.
+                endpoint,
 
-                  Do NOT send x-signature.
-                  Do NOT construct the
-                  storage endpoint manually.
-                */
+                headers: {
+                  authorization:
+                    `Bearer ${accessToken}`,
 
-                endpoint:
-                  signedUrl,
+                  "x-signature":
+                    token,
+                },
 
                 chunkSize:
                   6 *
@@ -738,12 +737,18 @@ export default function Home() {
                   true,
 
                 metadata: {
-                  filename:
+                  bucketName:
+                    "temporary-files",
+
+                  objectName:
                     uploadFile.name,
 
-                  filetype:
+                  contentType:
                     uploadFile.type ||
                     "application/octet-stream",
+
+                  cacheControl:
+                    "3600",
                 },
 
                 onError:
@@ -766,7 +771,8 @@ export default function Home() {
                     bytesTotal
                   ) => {
                     const percent =
-                      bytesTotal > 0
+                      bytesTotal >
+                      0
                         ? Math.round(
                             (bytesUploaded /
                               bytesTotal) *
@@ -794,9 +800,169 @@ export default function Home() {
               }
             );
 
-          upload.start();
+          upload
+            .findPreviousUploads()
+            .then(
+              (
+                previousUploads
+              ) => {
+                if (
+                  previousUploads.length
+                ) {
+                  upload.resumeFromPreviousUpload(
+                    previousUploads[0]
+                  );
+                }
+
+                upload.start();
+              }
+            )
+            .catch(
+              reject
+            );
         }
       );
+    };
+
+  /* ===================================================
+     ANONYMOUS ACCESS TOKEN
+  =================================================== */
+
+  const ensureAnonymousAccessToken =
+    async () => {
+      const {
+        data:
+          sessionData,
+      } =
+        await supabase.auth.getSession();
+
+      if (
+        sessionData?.session
+          ?.access_token
+      ) {
+        return (
+          sessionData.session
+            .access_token
+        );
+      }
+
+      const {
+        data,
+        error:
+          signInError,
+      } =
+        await supabase.auth.signInAnonymously();
+
+      if (
+        signInError
+      ) {
+        throw new Error(
+          "Anonymous sign-in is not enabled in Supabase. Enable Authentication → Anonymous sign-ins, then try again."
+        );
+      }
+
+      const accessToken =
+        data?.session
+          ?.access_token;
+
+      if (!accessToken) {
+        throw new Error(
+          "Supabase did not return an anonymous access token."
+        );
+      }
+
+      return accessToken;
+    };
+
+  /* ===================================================
+     SIGNED URL FALLBACK
+  =================================================== */
+
+  const uploadToSignedUrlFallback =
+    async (
+      uploadFile,
+      path,
+      token
+    ) => {
+      setUploadStage(
+        "Uploading securely..."
+      );
+
+      setUploadProgress(
+        5
+      );
+
+      const {
+        error:
+          uploadError,
+      } =
+        await supabase.storage
+          .from(
+            "temporary-files"
+          )
+          .uploadToSignedUrl(
+            path,
+            token,
+            uploadFile,
+            {
+              contentType:
+                uploadFile.type ||
+                "application/octet-stream",
+            }
+          );
+
+      if (
+        uploadError
+      ) {
+        throw uploadError;
+      }
+
+      setUploadProgress(
+        100
+      );
+    };
+
+  /* ===================================================
+     UPLOAD ROUTER
+  =================================================== */
+
+  const uploadWithProgress =
+    async (
+      uploadFile,
+      path,
+      token
+    ) => {
+      try {
+        /*
+          Preferred path:
+          TUS resumable upload.
+        */
+
+        const accessToken =
+          await ensureAnonymousAccessToken();
+
+        await uploadToTusWithProgress(
+          uploadFile,
+          token,
+          accessToken
+        );
+      } catch (tusError) {
+        console.warn(
+          "TUS upload unavailable, falling back to signed upload:",
+          tusError
+        );
+
+        /*
+          Fallback:
+          signed upload.
+        */
+
+        await uploadToSignedUrlFallback(
+          uploadFile,
+          path,
+          token
+        );
+      }
     };
 
   /* ===================================================
@@ -828,12 +994,8 @@ export default function Home() {
       setMessage("");
 
       try {
-        /* Prepare file */
-
         const uploadFile =
           await prepareUploadFile();
-
-        /* Initialize transfer */
 
         setUploadStage(
           "Creating secure transfer..."
@@ -855,23 +1017,13 @@ export default function Home() {
             }
           );
 
-        /*
-          IMPORTANT:
-          Backend v5 returns signedUrl.
-
-          We pass the signedUrl directly
-          to TUS.
-        */
-
         if (
-          !initData.signedUrl
+          !initData.token
         ) {
           throw new Error(
-            "Server did not return a signed upload URL."
+            "Server did not return a signed upload token."
           );
         }
-
-        /* Upload */
 
         setUploadStage(
           "Uploading..."
@@ -879,10 +1031,9 @@ export default function Home() {
 
         await uploadWithProgress(
           uploadFile,
-          initData.signedUrl
+          initData.path,
+          initData.token
         );
-
-        /* Activate */
 
         setUploadStage(
           "Finalizing..."
@@ -895,8 +1046,6 @@ export default function Home() {
               initData.code,
           }
         );
-
-        /* Success */
 
         setTransferCode(
           initData.code
@@ -1115,11 +1264,6 @@ export default function Home() {
           2000
         );
 
-        /*
-          Delete only after the complete
-          file has been received.
-        */
-
         await callTransferFunction(
           "complete-download",
           {
@@ -1170,7 +1314,9 @@ export default function Home() {
 
       setTransferCode("");
 
-      setExpiresAt(null);
+      setExpiresAt(
+        null
+      );
 
       setRemainingSeconds(
         0
@@ -1552,9 +1698,7 @@ export default function Home() {
 
             ) : (
 
-              /* =======================================
-                 UPLOADED STATE
-              ======================================= */
+              /* UPLOADED STATE */
 
               <div className="success-area">
 
