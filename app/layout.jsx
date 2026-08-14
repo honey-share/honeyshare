@@ -35,15 +35,31 @@ const manrope =
 export const metadata = {
   title:
     "HoneyShare — Fast. Simple. Temporary.",
+
   description:
     "Fast, simple and temporary file sharing without an account.",
+
   icons: {
     icon: "/honeyshare.svg",
-    shortcut: "/honeyshare.svg",
+    shortcut:
+      "/honeyshare.svg",
     apple:
       "/honeyshare.svg",
   },
-  themeColor: "#090e1d",
+};
+
+export const viewport = {
+  width:
+    "device-width",
+
+  initialScale:
+    1,
+
+  viewportFit:
+    "cover",
+
+  maximumScale:
+    1,
 };
 
 export default function RootLayout({
