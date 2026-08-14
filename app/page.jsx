@@ -13,9 +13,13 @@ const SUPABASE_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const MAX_FILE_SIZE =
+  50 * 1024 * 1024;
+
 const MAX_FILES = 10;
-const TRANSFER_SECONDS = 5 * 60;
+
+const TRANSFER_SECONDS =
+  5 * 60;
 
 const VISITOR_STORAGE_KEY =
   "honeyshare-visitor-id";
@@ -23,10 +27,11 @@ const VISITOR_STORAGE_KEY =
 const PRESENCE_CHANNEL =
   "honeyshare-live-users";
 
-const supabase = createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+const supabase =
+  createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
 
 /* =====================================================
    EDGE FUNCTION
@@ -72,7 +77,7 @@ async function callTransferFunction(
 }
 
 /* =====================================================
-   VISITOR ID
+   VISITOR
 ===================================================== */
 
 function getVisitorId() {
@@ -268,16 +273,22 @@ export default function Home() {
       );
 
     if (
-      savedTheme === "dark" ||
-      savedTheme === "light"
+      savedTheme ===
+        "dark" ||
+      savedTheme ===
+        "light"
     ) {
-      setTheme(savedTheme);
+      setTheme(
+        savedTheme
+      );
     }
 
     const visitorId =
       getVisitorId();
 
-    /* Visitor analytics */
+    /* -----------------------------
+       ANALYTICS
+    ----------------------------- */
 
     const recordVisitor =
       async () => {
@@ -294,7 +305,9 @@ export default function Home() {
               }
             );
 
-          if (visitorError) {
+          if (
+            visitorError
+          ) {
             console.error(
               "Visitor tracking error:",
               visitorError
@@ -310,7 +323,9 @@ export default function Home() {
 
     recordVisitor();
 
-    /* Realtime presence */
+    /* -----------------------------
+       REALTIME PRESENCE
+    ----------------------------- */
 
     const channel =
       supabase.channel(
@@ -318,7 +333,8 @@ export default function Home() {
         {
           config: {
             presence: {
-              key: visitorId,
+              key:
+                visitorId,
             },
           },
         }
@@ -332,13 +348,10 @@ export default function Home() {
         const state =
           channel.presenceState();
 
-        const count =
+        setLiveUsers(
           Object.keys(
             state || {}
-          ).length;
-
-        setLiveUsers(
-          count
+          ).length
         );
       };
 
@@ -373,18 +386,20 @@ export default function Home() {
           "SUBSCRIBED"
         ) {
           try {
-            await channel.track({
-              visitor_id:
-                visitorId,
+            await channel.track(
+              {
+                visitor_id:
+                  visitorId,
 
-              online_at:
-                new Date().toISOString(),
-            });
+                online_at:
+                  new Date().toISOString(),
+              }
+            );
 
             updateLiveUsers();
           } catch (err) {
             console.error(
-              "Presence tracking error:",
+              "Presence error:",
               err
             );
           }
@@ -406,9 +421,9 @@ export default function Home() {
     };
   }, []);
 
-  /* ===================================================
+  /* =====================================================
      TIMER
-  =================================================== */
+  ===================================================== */
 
   useEffect(() => {
     if (!expiresAt) {
@@ -466,18 +481,21 @@ export default function Home() {
       );
   }, [expiresAt]);
 
-  /* ===================================================
+  /* =====================================================
      THEME
-  =================================================== */
+  ===================================================== */
 
   const toggleTheme =
     () => {
       const next =
-        theme === "dark"
+        theme ===
+        "dark"
           ? "light"
           : "dark";
 
-      setTheme(next);
+      setTheme(
+        next
+      );
 
       localStorage.setItem(
         "honeyshare-theme",
@@ -485,9 +503,9 @@ export default function Home() {
       );
     };
 
-  /* ===================================================
+  /* =====================================================
      FILE VALIDATION
-  =================================================== */
+  ===================================================== */
 
   const validateFiles =
     (incoming) => {
@@ -499,7 +517,9 @@ export default function Home() {
       setError("");
       setMessage("");
 
-      if (!selected.length) {
+      if (
+        !selected.length
+      ) {
         return;
       }
 
@@ -516,8 +536,12 @@ export default function Home() {
 
       const totalSize =
         selected.reduce(
-          (sum, item) =>
-            sum + item.size,
+          (
+            sum,
+            item
+          ) =>
+            sum +
+            item.size,
           0
         );
 
@@ -552,9 +576,9 @@ export default function Home() {
       );
     };
 
-  /* ===================================================
-     FILE SELECT
-  =================================================== */
+  /* =====================================================
+     SELECT FILES
+  ===================================================== */
 
   const handleFileSelect =
     (event) => {
@@ -563,9 +587,44 @@ export default function Home() {
       );
     };
 
-  /* ===================================================
+  /* =====================================================
+     REMOVE SELECTED FILE
+  ===================================================== */
+
+  const removeFile =
+    (indexToRemove) => {
+      setFiles(
+        (
+          currentFiles
+        ) =>
+          currentFiles.filter(
+            (
+              _,
+              index
+            ) =>
+              index !==
+              indexToRemove
+          )
+      );
+
+      setError("");
+      setMessage("");
+
+      /*
+        Reset native input so the same file
+        can be selected again later.
+      */
+      if (
+        fileInputRef.current
+      ) {
+        fileInputRef.current.value =
+          "";
+      }
+    };
+
+  /* =====================================================
      DRAG & DROP
-  =================================================== */
+  ===================================================== */
 
   const handleDragOver =
     (event) => {
@@ -598,9 +657,9 @@ export default function Home() {
       );
     };
 
-  /* ===================================================
+  /* =====================================================
      ZIP PREPARATION
-  =================================================== */
+  ===================================================== */
 
   const prepareUploadFile =
     async () => {
@@ -623,7 +682,9 @@ export default function Home() {
         new JSZip();
 
       files.forEach(
-        (item) => {
+        (
+          item
+        ) => {
           zip.file(
             item.name,
             item
@@ -644,7 +705,9 @@ export default function Home() {
               true,
           },
 
-          (metadata) => {
+          (
+            metadata
+          ) => {
             setUploadProgress(
               Math.round(
                 metadata.percent
@@ -672,12 +735,64 @@ export default function Home() {
       );
     };
 
-  /* ===================================================
-     TUS UPLOAD WITH SIGNED TOKEN
+  /* =====================================================
+     ANONYMOUS ACCESS TOKEN
+  ===================================================== */
 
-     Supabase presigned resumable uploads use the
-     direct storage hostname plus x-signature.
-  =================================================== */
+  const ensureAnonymousAccessToken =
+    async () => {
+      const {
+        data:
+          sessionData,
+      } =
+        await supabase.auth.getSession();
+
+      if (
+        sessionData
+          ?.session
+          ?.access_token
+      ) {
+        return (
+          sessionData
+            .session
+            .access_token
+        );
+      }
+
+      const {
+        data,
+        error:
+          signInError,
+      } =
+        await supabase.auth.signInAnonymously();
+
+      if (
+        signInError
+      ) {
+        throw new Error(
+          "Anonymous sign-in is not enabled in Supabase. Enable Authentication → Anonymous sign-ins, then try again."
+        );
+      }
+
+      const accessToken =
+        data
+          ?.session
+          ?.access_token;
+
+      if (
+        !accessToken
+      ) {
+        throw new Error(
+          "Supabase did not return an anonymous access token."
+        );
+      }
+
+      return accessToken;
+    };
+
+  /* =====================================================
+     TUS UPLOAD
+  ===================================================== */
 
   const uploadToTusWithProgress =
     async (
@@ -824,59 +939,9 @@ export default function Home() {
       );
     };
 
-  /* ===================================================
-     ANONYMOUS ACCESS TOKEN
-  =================================================== */
-
-  const ensureAnonymousAccessToken =
-    async () => {
-      const {
-        data:
-          sessionData,
-      } =
-        await supabase.auth.getSession();
-
-      if (
-        sessionData?.session
-          ?.access_token
-      ) {
-        return (
-          sessionData.session
-            .access_token
-        );
-      }
-
-      const {
-        data,
-        error:
-          signInError,
-      } =
-        await supabase.auth.signInAnonymously();
-
-      if (
-        signInError
-      ) {
-        throw new Error(
-          "Anonymous sign-in is not enabled in Supabase. Enable Authentication → Anonymous sign-ins, then try again."
-        );
-      }
-
-      const accessToken =
-        data?.session
-          ?.access_token;
-
-      if (!accessToken) {
-        throw new Error(
-          "Supabase did not return an anonymous access token."
-        );
-      }
-
-      return accessToken;
-    };
-
-  /* ===================================================
+  /* =====================================================
      SIGNED URL FALLBACK
-  =================================================== */
+  ===================================================== */
 
   const uploadToSignedUrlFallback =
     async (
@@ -922,9 +987,9 @@ export default function Home() {
       );
     };
 
-  /* ===================================================
+  /* =====================================================
      UPLOAD ROUTER
-  =================================================== */
+  ===================================================== */
 
   const uploadWithProgress =
     async (
@@ -933,11 +998,6 @@ export default function Home() {
       token
     ) => {
       try {
-        /*
-          Preferred path:
-          TUS resumable upload.
-        */
-
         const accessToken =
           await ensureAnonymousAccessToken();
 
@@ -946,16 +1006,13 @@ export default function Home() {
           token,
           accessToken
         );
-      } catch (tusError) {
+      } catch (
+        tusError
+      ) {
         console.warn(
-          "TUS upload unavailable, falling back to signed upload:",
+          "TUS unavailable, using signed upload fallback:",
           tusError
         );
-
-        /*
-          Fallback:
-          signed upload.
-        */
 
         await uploadToSignedUrlFallback(
           uploadFile,
@@ -965,9 +1022,9 @@ export default function Home() {
       }
     };
 
-  /* ===================================================
+  /* =====================================================
      UPLOAD
-  =================================================== */
+  ===================================================== */
 
   const uploadFiles =
     async () => {
@@ -1087,9 +1144,9 @@ export default function Home() {
       }
     };
 
-  /* ===================================================
+  /* =====================================================
      DOWNLOAD
-  =================================================== */
+  ===================================================== */
 
   const downloadFile =
     async (
@@ -1294,9 +1351,9 @@ export default function Home() {
       }
     };
 
-  /* ===================================================
+  /* =====================================================
      QR
-  =================================================== */
+  ===================================================== */
 
   const qrValue =
     origin &&
@@ -1304,9 +1361,9 @@ export default function Home() {
       ? `${origin}/share?code=${transferCode}`
       : "";
 
-  /* ===================================================
+  /* =====================================================
      RESET
-  =================================================== */
+  ===================================================== */
 
   const resetUpload =
     () => {
@@ -1339,25 +1396,30 @@ export default function Home() {
       }
     };
 
-  /* ===================================================
-     TOTAL SELECTED SIZE
-  =================================================== */
+  /* =====================================================
+     SELECTED SIZE
+  ===================================================== */
 
   const totalSelectedSize =
     files.reduce(
-      (sum, file) =>
-        sum + file.size,
+      (
+        sum,
+        file
+      ) =>
+        sum +
+        file.size,
       0
     );
 
-  /* ===================================================
+  /* =====================================================
      UI
-  =================================================== */
+  ===================================================== */
 
   return (
     <main
       className={`page ${theme}`}
     >
+
       <div className="background-glow glow-one" />
 
       <div className="background-glow glow-two" />
@@ -1446,7 +1508,7 @@ export default function Home() {
 
         </section>
 
-        {/* MAIN CARDS */}
+        {/* TRANSFER GRID */}
 
         <div className="transfer-grid">
 
@@ -1558,64 +1620,90 @@ export default function Home() {
 
                 </label>
 
-                {/* FILE LIST */}
+                {/* SELECTED FILES */}
 
                 {files.length >
                   0 && (
 
                   <div className="selected-files">
 
-                    {files
-                      .slice(
-                        0,
-                        4
-                      )
-                      .map(
-                        (
-                          item,
-                          index
-                        ) => (
+                    {files.map(
+                      (
+                        item,
+                        index
+                      ) => (
 
-                          <div
-                            className="selected-file"
-                            key={`${item.name}-${index}`}
+                        <div
+                          className="selected-file"
+                          key={`${item.name}-${item.lastModified}-${index}`}
+                        >
+
+                          <span>
+                            ✓
+                          </span>
+
+                          <strong
+                            title={
+                              item.name
+                            }
                           >
+                            {
+                              item.name
+                            }
+                          </strong>
 
-                            <span>
-                              ✓
-                            </span>
+                          <small>
+                            {formatBytes(
+                              item.size
+                            )}
+                          </small>
 
-                            <strong
-                              title={
-                                item.name
-                              }
-                            >
-                              {
-                                item.name
-                              }
-                            </strong>
+                          {/* REMOVE */}
 
-                            <small>
-                              {formatBytes(
-                                item.size
-                              )}
-                            </small>
+                          <button
+                            type="button"
+                            aria-label={`Remove ${item.name}`}
+                            title="Remove file"
+                            onClick={() =>
+                              removeFile(
+                                index
+                              )
+                            }
+                            style={{
+                              width:
+                                "26px",
+                              height:
+                                "26px",
+                              padding:
+                                0,
+                              border:
+                                "0",
+                              borderRadius:
+                                "8px",
+                              background:
+                                "rgba(240, 80, 90, 0.08)",
+                              color:
+                                "#e66a73",
+                              display:
+                                "grid",
+                              placeItems:
+                                "center",
+                              fontSize:
+                                "18px",
+                              lineHeight:
+                                1,
+                              fontWeight:
+                                700,
+                              cursor:
+                                "pointer",
+                            }}
+                          >
+                            ×
+                          </button>
 
-                          </div>
+                        </div>
 
-                        )
-                      )}
-
-                    {files.length >
-                      4 && (
-
-                      <div className="more-files">
-                        +
-                        {files.length -
-                          4}{" "}
-                        more files
-                      </div>
-
+                      )
                     )}
 
                   </div>
@@ -1635,7 +1723,10 @@ export default function Home() {
                       </span>
 
                       <strong>
-                        {uploadProgress}%
+                        {
+                          uploadProgress
+                        }
+                        %
                       </strong>
 
                     </div>
@@ -1748,7 +1839,9 @@ export default function Home() {
                     <div className="transfer-code-box">
 
                       <span className="transfer-code">
-                        {transferCode}
+                        {
+                          transferCode
+                        }
                       </span>
 
                     </div>
@@ -1899,7 +1992,10 @@ export default function Home() {
                   </span>
 
                   <strong>
-                    {downloadProgress}%
+                    {
+                      downloadProgress
+                    }
+                    %
                   </strong>
 
                 </div>
@@ -1963,7 +2059,7 @@ export default function Home() {
 
         </div>
 
-        {/* MESSAGE */}
+        {/* STATUS */}
 
         {(message ||
           error) && (
@@ -1990,24 +2086,33 @@ export default function Home() {
         <div className="info-row">
 
           <div>
+
             <span className="info-icon">
               ⚡
             </span>
+
             Quick transfer
+
           </div>
 
           <div>
+
             <span className="info-icon">
               🔒
             </span>
+
             Private files
+
           </div>
 
           <div>
+
             <span className="info-icon">
               ⌛
             </span>
+
             Auto deleted
+
           </div>
 
         </div>
