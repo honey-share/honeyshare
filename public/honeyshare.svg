@@ -1,41 +1,299 @@
 <svg
-  width="256"
-  height="256"
-  viewBox="0 0 256 256"
-  fill="none"
   xmlns="http://www.w3.org/2000/svg"
+  width="900"
+  height="420"
+  viewBox="0 0 900 420"
+  fill="none"
 >
-  <rect
-    width="256"
-    height="256"
-    rx="58"
-    fill="#111827"
-  />
+  <defs>
 
-  <path
-    d="M128 35L196 74V152L128 191L60 152V74L128 35Z"
-    fill="#F5B83D"
-  />
+    <!-- Honey body gradient -->
+    <linearGradient
+      id="honeyBody"
+      x1="270"
+      y1="65"
+      x2="390"
+      y2="300"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop offset="0" stop-color="#FFD84A"/>
+      <stop offset="0.48" stop-color="#FFC52F"/>
+      <stop offset="1" stop-color="#FF9F0A"/>
+    </linearGradient>
 
-  <path
-    d="M128 58L176 86V140L128 168L80 140V86L128 58Z"
-    fill="#161D31"
-  />
+    <!-- Honey lower gradient -->
+    <linearGradient
+      id="honeyDrop"
+      x1="240"
+      y1="170"
+      x2="400"
+      y2="340"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop offset="0" stop-color="#FFC52F"/>
+      <stop offset="1" stop-color="#FF9800"/>
+    </linearGradient>
 
-  <path
-    d="M101 103H117V139H101V103ZM139 103H155V139H139V103ZM117 117H139V132H117V117Z"
-    fill="white"
-  />
+    <!-- Subtle highlight -->
+    <linearGradient
+      id="honeyHighlight"
+      x1="220"
+      y1="110"
+      x2="430"
+      y2="220"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop offset="0" stop-color="#FFE98A" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#FFF2B8" stop-opacity="0"/>
+    </linearGradient>
 
-  <path
-    d="M128 15L138 31H118L128 15Z"
-    fill="#FFE29A"
-  />
+    <!-- Wordmark gradient -->
+    <linearGradient
+      id="shareText"
+      x1="500"
+      y1="250"
+      x2="790"
+      y2="300"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop offset="0" stop-color="#FFC52F"/>
+      <stop offset="1" stop-color="#F59E0B"/>
+    </linearGradient>
+
+    <!-- Shadow -->
+    <filter
+      id="logoShadow"
+      x="80"
+      y="20"
+      width="360"
+      height="350"
+      filterUnits="userSpaceOnUse"
+    >
+      <feDropShadow
+        dx="0"
+        dy="14"
+        stdDeviation="13"
+        flood-color="#000000"
+        flood-opacity="0.24"
+      />
+    </filter>
+
+  </defs>
+
+  <!-- =========================================
+       HONEY BADGE
+  ========================================== -->
+
+  <g filter="url(#logoShadow)">
+
+    <!-- Main honey shape -->
+    <path
+      d="
+        M270 52
+        L360 104
+        C367 108 371 115 371 123
+        V205
+        C371 213 367 220 360 224
+        L280 271
+        C274 275 270 280 269 287
+        C267 302 260 313 248 313
+        C236 313 228 304 226 288
+        C225 281 222 276 216 272
+        L137 226
+        C130 222 126 215 126 207
+        V123
+        C126 115 130 108 137 104
+        L227 52
+        C240 44 257 44 270 52
+        Z
+      "
+      fill="url(#honeyBody)"
+    />
+
+    <!-- Top highlight -->
+    <path
+      d="
+        M270 70
+        L348 115
+        C352 118 355 122 355 127
+        V188
+        C355 193 352 198 348 201
+        L270 246
+        L192 201
+        C188 198 185 193 185 188
+        V127
+        C185 122 188 118 192 115
+        L270 70
+        Z
+      "
+      fill="url(#honeyHighlight)"
+    />
+
+    <!-- Honey wave / lower liquid -->
+    <path
+      d="
+        M126 178
+        C149 165 170 164 188 176
+        C206 188 217 187 235 176
+        C253 165 268 165 286 177
+        C303 188 320 189 338 177
+        C349 170 360 169 371 173
+        V207
+        C371 215 367 221 360 225
+        L280 272
+        C274 276 270 281 269 288
+        C267 303 260 313 248 313
+        C236 313 228 304 226 289
+        C225 281 222 276 216 272
+        L137 226
+        C130 222 126 215 126 207
+        Z
+      "
+      fill="url(#honeyDrop)"
+    />
+
+    <!-- Left drip -->
+    <path
+      d="
+        M171 216
+        C171 229 176 242 187 242
+        C198 242 203 231 203 218
+        V206
+        C193 209 183 213 171 216
+        Z
+      "
+      fill="#FFAA16"
+    />
+
+    <!-- Center drip -->
+    <path
+      d="
+        M229 246
+        C229 264 235 279 248 279
+        C261 279 267 264 267 246
+        V226
+        C253 231 241 239 229 246
+        Z
+      "
+      fill="#FFA10E"
+    />
+
+    <!-- Right drip -->
+    <path
+      d="
+        M301 215
+        C301 229 306 240 317 240
+        C328 240 333 229 333 217
+        V204
+        C321 208 311 212 301 215
+        Z
+      "
+      fill="#FFAB16"
+    />
+
+    <!-- H -->
+    <path
+      d="
+        M217 115
+        H239
+        V151
+        H281
+        V115
+        H303
+        V214
+        H281
+        V174
+        H239
+        V214
+        H217
+        V115
+        Z
+      "
+      fill="#111111"
+    />
+
+  </g>
+
+  <!-- =========================================
+       WORDMARK
+  ========================================== -->
+
+  <text
+    x="55"
+    y="360"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="67"
+    font-weight="800"
+    letter-spacing="-2.8"
+    fill="#FFFFFF"
+  >
+    Honey
+  </text>
+
+  <text
+    x="276"
+    y="360"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="67"
+    font-weight="800"
+    letter-spacing="-2.8"
+    fill="url(#shareText)"
+  >
+    Share
+  </text>
+
+  <!-- =========================================
+       TAGLINE
+  ========================================== -->
+
+  <text
+    x="58"
+    y="394"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="15"
+    font-weight="600"
+    letter-spacing="5"
+    fill="#FFFFFF"
+  >
+    FAST
+  </text>
 
   <circle
-    cx="218"
-    cy="45"
-    r="10"
-    fill="#F5B83D"
+    cx="163"
+    cy="389"
+    r="4"
+    fill="#FFC52F"
   />
+
+  <text
+    x="182"
+    y="394"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="15"
+    font-weight="600"
+    letter-spacing="5"
+    fill="#FFFFFF"
+  >
+    SIMPLE
+  </text>
+
+  <circle
+    cx="306"
+    cy="389"
+    r="4"
+    fill="#FFC52F"
+  />
+
+  <text
+    x="325"
+    y="394"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="15"
+    font-weight="600"
+    letter-spacing="5"
+    fill="#FFFFFF"
+  >
+    TEMPORARY
+  </text>
+
 </svg>
