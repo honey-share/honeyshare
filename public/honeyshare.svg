@@ -1,110 +1,41 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="320" viewBox="0 0 900 320" fill="none">
-  <defs>
-    <linearGradient
-      id="honey"
-      x1="85"
-      y1="55"
-      x2="290"
-      y2="270"
-      gradientUnits="userSpaceOnUse"
-    >
-      <stop offset="0" stop-color="#FFD447"/>
-      <stop offset="0.55" stop-color="#FFBE27"/>
-      <stop offset="1" stop-color="#F59E0B"/>
-    </linearGradient>
+<svg
+  width="256"
+  height="256"
+  viewBox="0 0 256 256"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <rect
+    width="256"
+    height="256"
+    rx="58"
+    fill="#111827"
+  />
 
-    <filter
-      id="shadow"
-      x="0"
-      y="0"
-      width="900"
-      height="320"
-      filterUnits="userSpaceOnUse"
-    >
-      <feDropShadow
-        dx="0"
-        dy="12"
-        stdDeviation="16"
-        flood-color="#000000"
-        flood-opacity="0.22"
-      />
-    </filter>
-  </defs>
+  <path
+    d="M128 35L196 74V152L128 191L60 152V74L128 35Z"
+    fill="#F5B83D"
+  />
 
-  <!-- HoneyShare logo mark -->
-  <g filter="url(#shadow)">
+  <path
+    d="M128 58L176 86V140L128 168L80 140V86L128 58Z"
+    fill="#161D31"
+  />
 
-    <!-- Main honey badge -->
-    <path
-      d="M155 42L230 85V170L155 213L80 170V85L155 42Z"
-      fill="url(#honey)"
-    />
+  <path
+    d="M101 103H117V139H101V103ZM139 103H155V139H139V103ZM117 117H139V132H117V117Z"
+    fill="white"
+  />
 
-    <!-- Honey drips -->
-    <path
-      d="M103 167
-         C103 188 111 207 124 207
-         C133 207 139 198 139 187
-         C139 204 146 219 158 219
-         C171 219 177 207 177 187
-         C177 201 184 210 194 210
-         C207 210 214 196 214 174
-         L155 209
-         L103 167Z"
-      fill="url(#honey)"
-    />
+  <path
+    d="M128 15L138 31H118L128 15Z"
+    fill="#FFE29A"
+  />
 
-    <!-- Inner honey highlight -->
-    <path
-      d="M155 61L214 95V161L155 196L96 161V95L155 61Z"
-      fill="#FFCD3E"
-      opacity="0.34"
-    />
-
-    <!-- H -->
-    <path
-      d="M123 101H140V130H170V101H187V161H170V143H140V161H123V101Z"
-      fill="#111827"
-    />
-
-  </g>
-
-  <!-- Honey -->
-  <text
-    x="300"
-    y="146"
-    font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-    font-size="74"
-    font-weight="800"
-    letter-spacing="-2.8"
-    fill="#FFFFFF"
-  >
-    Honey
-  </text>
-
-  <!-- Share -->
-  <text
-    x="548"
-    y="146"
-    font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-    font-size="74"
-    font-weight="800"
-    letter-spacing="-2.8"
-    fill="url(#honey)"
-  >
-    Share
-  </text>
-
-  <!-- Tagline -->
-  <text
-    x="304"
-    y="195"
-    font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-    font-size="18"
-    font-weight="600"
-    letter-spacing="5.5"
-    fill="#B9C2D6"
-  >
-    FAST • SIMPLE • TEMPORARY
-  </text>
+  <circle
+    cx="218"
+    cy="45"
+    r="10"
+    fill="#F5B83D"
+  />
 </svg>
