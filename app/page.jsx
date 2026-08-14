@@ -29,7 +29,7 @@ const supabase = createClient(
 );
 
 /* =====================================================
-   EDGE FUNCTION HELPER
+   EDGE FUNCTION
 ===================================================== */
 
 async function callTransferFunction(
@@ -110,7 +110,9 @@ function getVisitorId() {
 ===================================================== */
 
 function formatBytes(bytes) {
-  if (!bytes) return "0 B";
+  if (!bytes) {
+    return "0 B";
+  }
 
   if (bytes < 1024) {
     return `${bytes} B`;
@@ -142,9 +144,15 @@ function formatTime(seconds) {
 
   return `${String(
     minutes
-  ).padStart(2, "0")}:${String(
+  ).padStart(
+    2,
+    "0"
+  )}:${String(
     remaining
-  ).padStart(2, "0")}`;
+  ).padStart(
+    2,
+    "0"
+  )}`;
 }
 
 /* =====================================================
@@ -152,14 +160,26 @@ function formatTime(seconds) {
 ===================================================== */
 
 export default function Home() {
+  /* ===================================================
+     THEME
+  =================================================== */
+
   const [theme, setTheme] =
     useState("dark");
+
+  /* ===================================================
+     FILES
+  =================================================== */
 
   const [files, setFiles] =
     useState([]);
 
   const [dragActive, setDragActive] =
     useState(false);
+
+  /* ===================================================
+     UPLOAD
+  =================================================== */
 
   const [uploading, setUploading] =
     useState(false);
@@ -170,6 +190,10 @@ export default function Home() {
   const [uploadStage, setUploadStage] =
     useState("");
 
+  /* ===================================================
+     TRANSFER
+  =================================================== */
+
   const [transferCode, setTransferCode] =
     useState("");
 
@@ -178,6 +202,10 @@ export default function Home() {
 
   const [remainingSeconds, setRemainingSeconds] =
     useState(0);
+
+  /* ===================================================
+     DOWNLOAD
+  =================================================== */
 
   const [receiveCode, setReceiveCode] =
     useState("");
@@ -194,6 +222,10 @@ export default function Home() {
   const [downloadTotal, setDownloadTotal] =
     useState(0);
 
+  /* ===================================================
+     UI
+  =================================================== */
+
   const [message, setMessage] =
     useState("");
 
@@ -203,8 +235,16 @@ export default function Home() {
   const [origin, setOrigin] =
     useState("");
 
+  /* ===================================================
+     LIVE USERS
+  =================================================== */
+
   const [liveUsers, setLiveUsers] =
     useState(0);
+
+  /* ===================================================
+     REFS
+  =================================================== */
 
   const fileInputRef =
     useRef(null);
@@ -212,14 +252,16 @@ export default function Home() {
   const presenceChannelRef =
     useRef(null);
 
-  /* =====================================================
-     INITIAL
-  ===================================================== */
+  /* ===================================================
+     INITIALIZATION
+  =================================================== */
 
   useEffect(() => {
     setOrigin(
       window.location.origin
     );
+
+    /* Theme */
 
     const savedTheme =
       localStorage.getItem(
@@ -233,6 +275,8 @@ export default function Home() {
       setTheme(savedTheme);
     }
 
+    /* Visitor */
+
     const visitorId =
       getVisitorId();
 
@@ -242,14 +286,16 @@ export default function Home() {
       async () => {
         try {
           const {
-            error: visitorError,
-          } = await supabase.rpc(
-            "record_visitor",
-            {
-              p_visitor_id:
-                visitorId,
-            }
-          );
+            error:
+              visitorError,
+          } =
+            await supabase.rpc(
+              "record_visitor",
+              {
+                p_visitor_id:
+                  visitorId,
+              }
+            );
 
           if (visitorError) {
             console.error(
@@ -267,7 +313,7 @@ export default function Home() {
 
     recordVisitor();
 
-    /* Live users */
+    /* Realtime presence */
 
     const channel =
       supabase.channel(
@@ -289,10 +335,13 @@ export default function Home() {
         const state =
           channel.presenceState();
 
-        setLiveUsers(
+        const count =
           Object.keys(
             state || {}
-          ).length
+          ).length;
+
+        setLiveUsers(
+          count
         );
       };
 
@@ -338,7 +387,7 @@ export default function Home() {
             updateLiveUsers();
           } catch (err) {
             console.error(
-              "Presence error:",
+              "Presence tracking error:",
               err
             );
           }
@@ -360,9 +409,9 @@ export default function Home() {
     };
   }, []);
 
-  /* =====================================================
+  /* ===================================================
      TIMER
-  ===================================================== */
+  =================================================== */
 
   useEffect(() => {
     if (!expiresAt) {
@@ -386,7 +435,8 @@ export default function Home() {
 
         const seconds =
           Math.ceil(
-            remaining / 1000
+            remaining /
+              1000
           );
 
         setRemainingSeconds(
@@ -419,27 +469,28 @@ export default function Home() {
       );
   }, [expiresAt]);
 
-  /* =====================================================
+  /* ===================================================
      THEME
-  ===================================================== */
+  =================================================== */
 
-  const toggleTheme = () => {
-    const next =
-      theme === "dark"
-        ? "light"
-        : "dark";
+  const toggleTheme =
+    () => {
+      const next =
+        theme === "dark"
+          ? "light"
+          : "dark";
 
-    setTheme(next);
+      setTheme(next);
 
-    localStorage.setItem(
-      "honeyshare-theme",
-      next
-    );
-  };
+      localStorage.setItem(
+        "honeyshare-theme",
+        next
+      );
+    };
 
-  /* =====================================================
+  /* ===================================================
      FILE VALIDATION
-  ===================================================== */
+  =================================================== */
 
   const validateFiles =
     (incoming) => {
@@ -504,6 +555,10 @@ export default function Home() {
       );
     };
 
+  /* ===================================================
+     FILE SELECT
+  =================================================== */
+
   const handleFileSelect =
     (event) => {
       validateFiles(
@@ -511,41 +566,50 @@ export default function Home() {
       );
     };
 
-  /* =====================================================
-     DRAG DROP
-  ===================================================== */
+  /* ===================================================
+     DRAG & DROP
+  =================================================== */
 
   const handleDragOver =
     (event) => {
       event.preventDefault();
-      setDragActive(true);
+
+      setDragActive(
+        true
+      );
     };
 
   const handleDragLeave =
     (event) => {
       event.preventDefault();
-      setDragActive(false);
+
+      setDragActive(
+        false
+      );
     };
 
   const handleDrop =
     (event) => {
       event.preventDefault();
 
-      setDragActive(false);
+      setDragActive(
+        false
+      );
 
       validateFiles(
         event.dataTransfer.files
       );
     };
 
-  /* =====================================================
-     ZIP
-  ===================================================== */
+  /* ===================================================
+     ZIP PREPARATION
+  =================================================== */
 
   const prepareUploadFile =
     async () => {
       if (
-        files.length === 1
+        files.length ===
+        1
       ) {
         return files[0];
       }
@@ -573,10 +637,16 @@ export default function Home() {
       const blob =
         await zip.generateAsync(
           {
-            type: "blob",
-            compression: "STORE",
-            streamFiles: true,
+            type:
+              "blob",
+
+            compression:
+              "STORE",
+
+            streamFiles:
+              true,
           },
+
           (metadata) => {
             setUploadProgress(
               Math.round(
@@ -605,59 +675,48 @@ export default function Home() {
       );
     };
 
-  /* =====================================================
-     TUS UPLOAD
-  ===================================================== */
+  /* ===================================================
+     TUS UPLOAD WITH SIGNED URL
+  =================================================== */
 
   const uploadWithProgress =
     (
       uploadFile,
-      path,
-      token
+      signedUrl
     ) => {
       return new Promise(
         (
           resolve,
           reject
         ) => {
-          const hostname =
-            new URL(
-              SUPABASE_URL
-            ).hostname;
+          if (
+            !signedUrl
+          ) {
+            reject(
+              new Error(
+                "Missing signed upload URL."
+              )
+            );
 
-          const projectRef =
-            hostname.split(
-              "."
-            )[0];
-
-          const endpoint =
-            `https://${projectRef}.storage.supabase.co/storage/v1/upload/resumable`;
+            return;
+          }
 
           const upload =
             new tus.Upload(
               uploadFile,
               {
-                endpoint,
+                /*
+                  IMPORTANT:
+                  The Supabase signed URL
+                  is the TUS endpoint.
 
-                headers: {
-                  "x-signature":
-                    token,
-                },
+                  Do NOT send x-signature.
+                  Do NOT construct the
+                  storage endpoint manually.
+                */
 
-                metadata: {
-                  bucketName:
-                    "temporary-files",
-
-                  objectName:
-                    path,
-
-                  contentType:
-                    uploadFile.type ||
-                    "application/octet-stream",
-
-                  cacheControl:
-                    "3600",
-                },
+                endpoint:
+                  signedUrl,
 
                 chunkSize:
                   6 *
@@ -678,8 +737,19 @@ export default function Home() {
                 removeFingerprintOnSuccess:
                   true,
 
+                metadata: {
+                  filename:
+                    uploadFile.name,
+
+                  filetype:
+                    uploadFile.type ||
+                    "application/octet-stream",
+                },
+
                 onError:
-                  (uploadError) => {
+                  (
+                    uploadError
+                  ) => {
                     console.error(
                       "TUS upload error:",
                       uploadError
@@ -696,11 +766,13 @@ export default function Home() {
                     bytesTotal
                   ) => {
                     const percent =
-                      Math.round(
-                        (bytesUploaded /
-                          bytesTotal) *
-                          100
-                      );
+                      bytesTotal > 0
+                        ? Math.round(
+                            (bytesUploaded /
+                              bytesTotal) *
+                              100
+                          )
+                        : 0;
 
                     setUploadProgress(
                       percent
@@ -713,6 +785,10 @@ export default function Home() {
 
                 onSuccess:
                   () => {
+                    setUploadProgress(
+                      100
+                    );
+
                     resolve();
                   },
               }
@@ -723,9 +799,9 @@ export default function Home() {
       );
     };
 
-  /* =====================================================
+  /* ===================================================
      UPLOAD
-  ===================================================== */
+  =================================================== */
 
   const uploadFiles =
     async () => {
@@ -752,8 +828,12 @@ export default function Home() {
       setMessage("");
 
       try {
+        /* Prepare file */
+
         const uploadFile =
           await prepareUploadFile();
+
+        /* Initialize transfer */
 
         setUploadStage(
           "Creating secure transfer..."
@@ -775,15 +855,34 @@ export default function Home() {
             }
           );
 
+        /*
+          IMPORTANT:
+          Backend v5 returns signedUrl.
+
+          We pass the signedUrl directly
+          to TUS.
+        */
+
+        if (
+          !initData.signedUrl
+        ) {
+          throw new Error(
+            "Server did not return a signed upload URL."
+          );
+        }
+
+        /* Upload */
+
         setUploadStage(
           "Uploading..."
         );
 
         await uploadWithProgress(
           uploadFile,
-          initData.path,
-          initData.token
+          initData.signedUrl
         );
+
+        /* Activate */
 
         setUploadStage(
           "Finalizing..."
@@ -796,6 +895,8 @@ export default function Home() {
               initData.code,
           }
         );
+
+        /* Success */
 
         setTransferCode(
           initData.code
@@ -837,9 +938,9 @@ export default function Home() {
       }
     };
 
-  /* =====================================================
+  /* ===================================================
      DOWNLOAD
-  ===================================================== */
+  =================================================== */
 
   const downloadFile =
     async (
@@ -949,7 +1050,8 @@ export default function Home() {
             );
 
             if (
-              total > 0
+              total >
+              0
             ) {
               setDownloadProgress(
                 Math.min(
@@ -989,7 +1091,8 @@ export default function Home() {
             "a"
           );
 
-        link.href = url;
+        link.href =
+          url;
 
         link.download =
           data.fileName ||
@@ -1012,10 +1115,16 @@ export default function Home() {
           2000
         );
 
+        /*
+          Delete only after the complete
+          file has been received.
+        */
+
         await callTransferFunction(
           "complete-download",
           {
-            id: data.id,
+            id:
+              data.id,
           }
         );
 
@@ -1041,9 +1150,9 @@ export default function Home() {
       }
     };
 
-  /* =====================================================
+  /* ===================================================
      QR
-  ===================================================== */
+  =================================================== */
 
   const qrValue =
     origin &&
@@ -1051,9 +1160,9 @@ export default function Home() {
       ? `${origin}/share?code=${transferCode}`
       : "";
 
-  /* =====================================================
+  /* ===================================================
      RESET
-  ===================================================== */
+  =================================================== */
 
   const resetUpload =
     () => {
@@ -1084,6 +1193,10 @@ export default function Home() {
       }
     };
 
+  /* ===================================================
+     TOTAL SELECTED SIZE
+  =================================================== */
+
   const totalSelectedSize =
     files.reduce(
       (sum, file) =>
@@ -1091,18 +1204,21 @@ export default function Home() {
       0
     );
 
-  /* =====================================================
+  /* ===================================================
      UI
-  ===================================================== */
+  =================================================== */
 
   return (
     <main
       className={`page ${theme}`}
     >
       <div className="background-glow glow-one" />
+
       <div className="background-glow glow-two" />
 
       <section className="container">
+
+        {/* HEADER */}
 
         <header className="header">
 
@@ -1113,6 +1229,7 @@ export default function Home() {
             </div>
 
             <div>
+
               <h1>
                 HoneyShare
               </h1>
@@ -1120,13 +1237,17 @@ export default function Home() {
               <p>
                 Fast. Simple. Temporary.
               </p>
+
             </div>
 
           </div>
 
           <div className="header-actions">
 
-            <div className="live-users-badge">
+            <div
+              className="live-users-badge"
+              title="Currently active visitors"
+            >
 
               <span className="live-users-dot" />
 
@@ -1146,6 +1267,7 @@ export default function Home() {
               onClick={
                 toggleTheme
               }
+              aria-label="Toggle theme"
             >
               {theme ===
               "dark"
@@ -1156,6 +1278,8 @@ export default function Home() {
           </div>
 
         </header>
+
+        {/* HERO */}
 
         <section className="hero">
 
@@ -1175,6 +1299,8 @@ export default function Home() {
           </p>
 
         </section>
+
+        {/* MAIN CARDS */}
 
         <div className="transfer-grid">
 
@@ -1241,7 +1367,9 @@ export default function Home() {
 
                   {files.length ===
                   0 ? (
+
                     <>
+
                       <strong>
                         Drop files here
                       </strong>
@@ -1253,9 +1381,13 @@ export default function Home() {
                       <small>
                         Up to 10 files • 50 MB total
                       </small>
+
                     </>
+
                   ) : (
+
                     <>
+
                       <strong>
                         {files.length ===
                         1
@@ -1273,10 +1405,14 @@ export default function Home() {
                       <small>
                         Click to change files
                       </small>
+
                     </>
+
                   )}
 
                 </label>
+
+                {/* FILE LIST */}
 
                 {files.length >
                   0 && (
@@ -1340,6 +1476,8 @@ export default function Home() {
 
                 )}
 
+                {/* UPLOAD PROGRESS */}
+
                 {uploading && (
 
                   <div className="progress-panel">
@@ -1361,22 +1499,27 @@ export default function Home() {
                       <div
                         className="progress-fill"
                         style={{
-                          width: `${uploadProgress}%`,
+                          width:
+                            `${uploadProgress}%`,
                         }}
                       />
 
                     </div>
 
                     <div className="progress-detail">
+
                       {files.length >
                       1
                         ? "Creating and uploading ZIP"
                         : "Uploading securely"}
+
                     </div>
 
                   </div>
 
                 )}
+
+                {/* UPLOAD BUTTON */}
 
                 <button
                   type="button"
@@ -1389,6 +1532,7 @@ export default function Home() {
                     uploadFiles
                   }
                 >
+
                   {uploading
                     ? `${uploadProgress}%`
                     : files.length >
@@ -1401,11 +1545,16 @@ export default function Home() {
                       →
                     </span>
                   )}
+
                 </button>
 
               </>
 
             ) : (
+
+              /* =======================================
+                 UPLOADED STATE
+              ======================================= */
 
               <div className="success-area">
 
@@ -1438,10 +1587,12 @@ export default function Home() {
                             : files[0]?.name
                         }
                       >
+
                         {files.length >
                         1
                           ? `${files.length} files • ZIP archive`
                           : files[0]?.name}
+
                       </span>
 
                     </div>
@@ -1453,9 +1604,7 @@ export default function Home() {
                     <div className="transfer-code-box">
 
                       <span className="transfer-code">
-                        {
-                          transferCode
-                        }
+                        {transferCode}
                       </span>
 
                     </div>
@@ -1493,6 +1642,7 @@ export default function Home() {
                     <div className="qr-box">
 
                       {qrValue && (
+
                         <QRCodeCanvas
                           value={
                             qrValue
@@ -1505,6 +1655,7 @@ export default function Home() {
                             true
                           }
                         />
+
                       )}
 
                     </div>
@@ -1566,6 +1717,7 @@ export default function Home() {
                 onChange={(
                   event
                 ) => {
+
                   setError("");
                   setMessage("");
 
@@ -1580,6 +1732,7 @@ export default function Home() {
                         5
                       )
                   );
+
                 }}
               />
 
@@ -1588,6 +1741,8 @@ export default function Home() {
               </span>
 
             </div>
+
+            {/* DOWNLOAD PROGRESS */}
 
             {downloading && (
 
@@ -1610,7 +1765,8 @@ export default function Home() {
                   <div
                     className="progress-fill download-fill"
                     style={{
-                      width: `${downloadProgress}%`,
+                      width:
+                        `${downloadProgress}%`,
                     }}
                   />
 
@@ -1663,6 +1819,8 @@ export default function Home() {
 
         </div>
 
+        {/* MESSAGE */}
+
         {(message ||
           error) && (
 
@@ -1673,13 +1831,17 @@ export default function Home() {
                 : "success"
             }`}
           >
+
             {
               error ||
               message
             }
+
           </div>
 
         )}
+
+        {/* FEATURES */}
 
         <div className="info-row">
 
@@ -1705,6 +1867,8 @@ export default function Home() {
           </div>
 
         </div>
+
+        {/* FOOTER */}
 
         <footer>
 
