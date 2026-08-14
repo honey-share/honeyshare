@@ -1,0 +1,41 @@
+<svg
+  width="256"
+  height="256"
+  viewBox="0 0 256 256"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <rect
+    width="256"
+    height="256"
+    rx="58"
+    fill="#111827"
+  />
+
+  <path
+    d="M128 35L196 74V152L128 191L60 152V74L128 35Z"
+    fill="#F5B83D"
+  />
+
+  <path
+    d="M128 58L176 86V140L128 168L80 140V86L128 58Z"
+    fill="#161D31"
+  />
+
+  <path
+    d="M101 103H117V139H101V103ZM139 103H155V139H139V103ZM117 117H139V132H117V117Z"
+    fill="white"
+  />
+
+  <path
+    d="M128 15L138 31H118L128 15Z"
+    fill="#FFE29A"
+  />
+
+  <circle
+    cx="218"
+    cy="45"
+    r="10"
+    fill="#F5B83D"
+  />
+</svg>
