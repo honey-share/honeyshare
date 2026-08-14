@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { QRCodeCanvas } from "qrcode.react";
+import JSZip from "jszip";
+import * as tus from "tus-js-client";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -14,8 +16,13 @@ const SUPABASE_KEY =
 const FUNCTION_URL =
   `${SUPABASE_URL}/functions/v1/transfer-v2`;
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
-const TRANSFER_SECONDS = 5 * 60;
+const MAX_FILE_SIZE =
+  50 * 1024 * 1024;
+
+const MAX_FILES = 10;
+
+const TRANSFER_SECONDS =
+  5 * 60;
 
 const VISITOR_STORAGE_KEY =
   "honeyshare-visitor-id";
@@ -23,25 +30,27 @@ const VISITOR_STORAGE_KEY =
 const PRESENCE_CHANNEL =
   "honeyshare-live-users";
 
-const supabase = createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+const supabase =
+  createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
 
 /* =====================================================
-   VISITOR ID
+   HELPERS
 ===================================================== */
 
 function getVisitorId() {
   try {
-    let visitorId =
+    let id =
       localStorage.getItem(
         VISITOR_STORAGE_KEY
       );
 
-    if (!visitorId) {
-      visitorId =
-        typeof crypto !== "undefined" &&
+    if (!id) {
+      id =
+        typeof crypto !==
+          "undefined" &&
         crypto.randomUUID
           ? crypto.randomUUID()
           : `visitor-${Date.now()}-${Math.random()
@@ -50,11 +59,11 @@ function getVisitorId() {
 
       localStorage.setItem(
         VISITOR_STORAGE_KEY,
-        visitorId
+        id
       );
     }
 
-    return visitorId;
+    return id;
   } catch {
     return `visitor-${Date.now()}-${Math.random()
       .toString(36)
@@ -62,19 +71,74 @@ function getVisitorId() {
   }
 }
 
-/* =====================================================
-   HOME
-===================================================== */
+function formatBytes(bytes) {
+  if (!bytes) return "0 B";
+
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  if (
+    bytes <
+    1024 * 1024
+  ) {
+    return `${(
+      bytes / 1024
+    ).toFixed(1)} KB`;
+  }
+
+  return `${(
+    bytes /
+    (1024 * 1024)
+  ).toFixed(2)} MB`;
+}
+
+function formatTime(seconds) {
+  const minutes =
+    Math.floor(
+      seconds / 60
+    );
+
+  const remaining =
+    seconds % 60;
+
+  return `${String(
+    minutes
+  ).padStart(2, "0")}:${String(
+    remaining
+  ).padStart(2, "0")}`;
+}
 
 export default function Home() {
+  /* =====================================================
+     THEME
+  ===================================================== */
+
   const [theme, setTheme] =
     useState("dark");
 
-  const [file, setFile] =
-    useState(null);
+  /* =====================================================
+     FILES
+  ===================================================== */
+
+  const [files, setFiles] =
+    useState([]);
+
+  const [dragActive, setDragActive] =
+    useState(false);
 
   const [uploading, setUploading] =
     useState(false);
+
+  const [uploadProgress, setUploadProgress] =
+    useState(0);
+
+  const [uploadStage, setUploadStage] =
+    useState("");
+
+  /* =====================================================
+     TRANSFER
+  ===================================================== */
 
   const [transferCode, setTransferCode] =
     useState("");
@@ -85,11 +149,28 @@ export default function Home() {
   const [remainingSeconds, setRemainingSeconds] =
     useState(0);
 
+  /* =====================================================
+     RECEIVE
+  ===================================================== */
+
   const [receiveCode, setReceiveCode] =
     useState("");
 
   const [downloading, setDownloading] =
     useState(false);
+
+  const [downloadProgress, setDownloadProgress] =
+    useState(0);
+
+  const [downloadedBytes, setDownloadedBytes] =
+    useState(0);
+
+  const [downloadTotal, setDownloadTotal] =
+    useState(0);
+
+  /* =====================================================
+     UI
+  ===================================================== */
 
   const [message, setMessage] =
     useState("");
@@ -100,30 +181,23 @@ export default function Home() {
   const [origin, setOrigin] =
     useState("");
 
-  /* LIVE USERS */
-
   const [liveUsers, setLiveUsers] =
     useState(0);
 
   const fileInputRef =
     useRef(null);
 
-  const qrAttempted =
-    useRef(false);
-
   const presenceChannelRef =
     useRef(null);
 
   /* =====================================================
-     INITIAL + ANALYTICS + LIVE USERS
+     INITIAL
   ===================================================== */
 
   useEffect(() => {
     setOrigin(
       window.location.origin
     );
-
-    /* Theme */
 
     const savedTheme =
       localStorage.getItem(
@@ -137,43 +211,24 @@ export default function Home() {
       setTheme(savedTheme);
     }
 
-    /* Anonymous visitor */
-
     const visitorId =
       getVisitorId();
 
-    /*
-      Record visitor in database.
-
-      This updates:
-      - total visitor
-      - today's visitor
-      - monthly visitor
-    */
+    /* ANALYTICS */
 
     const recordVisitor =
       async () => {
         try {
-          const {
-            error: visitorError,
-          } =
-            await supabase.rpc(
-              "record_visitor",
-              {
-                p_visitor_id:
-                  visitorId,
-              }
-            );
-
-          if (visitorError) {
-            console.error(
-              "Visitor analytics error:",
-              visitorError
-            );
-          }
+          await supabase.rpc(
+            "record_visitor",
+            {
+              p_visitor_id:
+                visitorId,
+            }
+          );
         } catch (err) {
           console.error(
-            "Visitor tracking error:",
+            "Visitor tracking:",
             err
           );
         }
@@ -181,9 +236,7 @@ export default function Home() {
 
     recordVisitor();
 
-    /* =================================================
-       SUPABASE REALTIME PRESENCE
-    ================================================= */
+    /* LIVE USERS */
 
     const channel =
       supabase.channel(
@@ -205,19 +258,11 @@ export default function Home() {
         const state =
           channel.presenceState();
 
-        /*
-          Presence keys are unique visitor IDs.
-
-          Same visitor opening multiple tabs
-          will still count as one visitor.
-        */
-
-        const count =
+        setLiveUsers(
           Object.keys(
             state || {}
-          ).length;
-
-        setLiveUsers(count);
+          ).length
+        );
       };
 
     channel.on(
@@ -250,22 +295,15 @@ export default function Home() {
           status ===
           "SUBSCRIBED"
         ) {
-          try {
-            await channel.track({
-              visitor_id:
-                visitorId,
+          await channel.track({
+            visitor_id:
+              visitorId,
 
-              online_at:
-                new Date().toISOString(),
-            });
+            online_at:
+              new Date().toISOString(),
+          });
 
-            updateLiveUsers();
-          } catch (err) {
-            console.error(
-              "Presence tracking error:",
-              err
-            );
-          }
+          updateLiveUsers();
         }
       }
     );
@@ -288,39 +326,19 @@ export default function Home() {
      THEME
   ===================================================== */
 
-  const toggleTheme = () => {
-    const newTheme =
-      theme === "dark"
-        ? "light"
-        : "dark";
+  const toggleTheme =
+    () => {
+      const next =
+        theme === "dark"
+          ? "light"
+          : "dark";
 
-    setTheme(newTheme);
+      setTheme(next);
 
-    localStorage.setItem(
-      "honeyshare-theme",
-      newTheme
-    );
-  };
-
-  /* =====================================================
-     FILE SIZE
-  ===================================================== */
-
-  const formatFileSize =
-    (bytes) => {
-      if (
-        bytes <
-        1024 * 1024
-      ) {
-        return `${(
-          bytes / 1024
-        ).toFixed(1)} KB`;
-      }
-
-      return `${(
-        bytes /
-        (1024 * 1024)
-      ).toFixed(2)} MB`;
+      localStorage.setItem(
+        "honeyshare-theme",
+        next
+      );
     };
 
   /* =====================================================
@@ -329,11 +347,14 @@ export default function Home() {
 
   useEffect(() => {
     if (!expiresAt) {
-      setRemainingSeconds(0);
+      setRemainingSeconds(
+        0
+      );
+
       return;
     }
 
-    const updateTimer =
+    const update =
       () => {
         const remaining =
           Math.max(
@@ -365,11 +386,11 @@ export default function Home() {
         }
       };
 
-    updateTimer();
+    update();
 
     const interval =
       setInterval(
-        updateTimer,
+        update,
         1000
       );
 
@@ -379,91 +400,341 @@ export default function Home() {
       );
   }, [expiresAt]);
 
-  const formatTime =
-    () => {
-      const minutes =
-        Math.floor(
-          remainingSeconds /
-            60
-        );
-
-      const seconds =
-        remainingSeconds %
-        60;
-
-      return `${String(
-        minutes
-      ).padStart(
-        2,
-        "0"
-      )}:${String(
-        seconds
-      ).padStart(
-        2,
-        "0"
-      )}`;
-    };
-
   /* =====================================================
-     SELECT FILE
+     VALIDATE FILES
   ===================================================== */
 
-  const handleFileSelect =
-    (event) => {
+  const validateFiles =
+    (incoming) => {
+      const selected =
+        Array.from(
+          incoming
+        );
+
+      if (!selected.length) {
+        return;
+      }
+
       setError("");
       setMessage("");
 
-      const selected =
-        event.target.files?.[0];
-
-      if (!selected)
-        return;
-
       if (
-        selected.size >
-        MAX_FILE_SIZE
+        selected.length >
+        MAX_FILES
       ) {
-        setFile(null);
-
-        if (
-          fileInputRef.current
-        ) {
-          fileInputRef.current.value =
-            "";
-        }
-
         setError(
-          "Maximum file size is 50 MB."
+          `Maximum ${MAX_FILES} files can be selected.`
         );
 
         return;
       }
 
-      setFile(selected);
+      const totalSize =
+        selected.reduce(
+          (sum, item) =>
+            sum + item.size,
+          0
+        );
+
+      if (
+        selected.some(
+          (item) =>
+            item.size >
+            MAX_FILE_SIZE
+        )
+      ) {
+        setError(
+          "One of the selected files is larger than 50 MB."
+        );
+
+        return;
+      }
+
+      if (
+        totalSize >
+        MAX_FILE_SIZE
+      ) {
+        setError(
+          "Total selected file size cannot exceed 50 MB."
+        );
+
+        return;
+      }
+
+      setFiles(
+        selected
+      );
+    };
+
+  /* =====================================================
+     FILE INPUT
+  ===================================================== */
+
+  const handleFileSelect =
+    (event) => {
+      validateFiles(
+        event.target.files
+      );
+    };
+
+  /* =====================================================
+     DRAG DROP
+  ===================================================== */
+
+  const handleDragOver =
+    (event) => {
+      event.preventDefault();
+
+      setDragActive(
+        true
+      );
+    };
+
+  const handleDragLeave =
+    (event) => {
+      event.preventDefault();
+
+      setDragActive(
+        false
+      );
+    };
+
+  const handleDrop =
+    (event) => {
+      event.preventDefault();
+
+      setDragActive(
+        false
+      );
+
+      validateFiles(
+        event.dataTransfer
+          .files
+      );
+    };
+
+  /* =====================================================
+     PREPARE UPLOAD
+  ===================================================== */
+
+  const prepareUploadFile =
+    async () => {
+      if (
+        files.length === 1
+      ) {
+        return files[0];
+      }
+
+      setUploadStage(
+        "Preparing ZIP..."
+      );
+
+      setUploadProgress(0);
+
+      const zip =
+        new JSZip();
+
+      files.forEach(
+        (item) => {
+          zip.file(
+            item.name,
+            item
+          );
+        }
+      );
+
+      const blob =
+        await zip.generateAsync(
+          {
+            type: "blob",
+
+            compression:
+              "STORE",
+
+            streamFiles:
+              true,
+          },
+
+          (metadata) => {
+            setUploadProgress(
+              Math.round(
+                metadata.percent
+              )
+            );
+          }
+        );
+
+      if (
+        blob.size >
+        MAX_FILE_SIZE
+      ) {
+        throw new Error(
+          "The generated ZIP is larger than the 50 MB limit."
+        );
+      }
+
+      return new File(
+        [blob],
+        `HoneyShare-${Date.now()}.zip`,
+        {
+          type:
+            "application/zip",
+        }
+      );
+    };
+
+  /* =====================================================
+     TUS UPLOAD
+  ===================================================== */
+
+  const uploadWithProgress =
+    (
+      uploadFile,
+      path,
+      token
+    ) => {
+      return new Promise(
+        (
+          resolve,
+          reject
+        ) => {
+          const projectRef =
+            new URL(
+              SUPABASE_URL
+            ).hostname.split(
+              "."
+            )[0];
+
+          const endpoint =
+            `https://${projectRef}.storage.supabase.co/storage/v1/upload/resumable`;
+
+          const upload =
+            new tus.Upload(
+              uploadFile,
+              {
+                endpoint,
+
+                headers: {
+                  "x-signature":
+                    token,
+                },
+
+                metadata: {
+                  bucketName:
+                    "temporary-files",
+
+                  objectName:
+                    path,
+
+                  contentType:
+                    uploadFile.type ||
+                    "application/octet-stream",
+
+                  cacheControl:
+                    "3600",
+                },
+
+                chunkSize:
+                  6 *
+                  1024 *
+                  1024,
+
+                retryDelays: [
+                  0,
+                  3000,
+                  5000,
+                  10000,
+                  20000,
+                ],
+
+                uploadDataDuringCreation:
+                  true,
+
+                removeFingerprintOnSuccess:
+                  true,
+
+                onError:
+                  (uploadError) => {
+                    reject(
+                      uploadError
+                    );
+                  },
+
+                onProgress:
+                  (
+                    bytesUploaded,
+                    bytesTotal
+                  ) => {
+                    const percent =
+                      Math.round(
+                        (bytesUploaded /
+                          bytesTotal) *
+                          100
+                      );
+
+                    setUploadProgress(
+                      percent
+                    );
+
+                    setUploadStage(
+                      `Uploading ${percent}%`
+                    );
+                  },
+
+                onSuccess:
+                  () => {
+                    resolve();
+                  },
+              }
+            );
+
+          upload.start();
+        }
+      );
     };
 
   /* =====================================================
      UPLOAD
   ===================================================== */
 
-  const uploadFile =
+  const uploadFiles =
     async () => {
       if (
-        !file ||
+        !files.length ||
         uploading
-      )
+      ) {
         return;
+      }
 
-      setUploading(true);
+      setUploading(
+        true
+      );
+
+      setUploadProgress(
+        0
+      );
+
       setError("");
       setMessage("");
 
       try {
+        const uploadFile =
+          await prepareUploadFile();
+
+        setUploadStage(
+          "Starting upload..."
+        );
+
+        setUploadProgress(
+          0
+        );
+
         const initResponse =
           await fetch(
             FUNCTION_URL,
             {
-              method: "POST",
+              method:
+                "POST",
 
               headers: {
                 "Content-Type":
@@ -475,13 +746,13 @@ export default function Home() {
                   "init-upload",
 
                 fileName:
-                  file.name,
+                  uploadFile.name,
 
                 fileSize:
-                  file.size,
+                  uploadFile.size,
 
                 mimeType:
-                  file.type ||
+                  uploadFile.type ||
                   "application/octet-stream",
               }),
             }
@@ -499,29 +770,22 @@ export default function Home() {
           );
         }
 
-        const {
-          error:
-            uploadError,
-        } =
-          await supabase.storage
-            .from(
-              "temporary-files"
-            )
-            .uploadToSignedUrl(
-              initData.path,
-              initData.token,
-              file
-            );
+        await uploadWithProgress(
+          uploadFile,
+          initData.path,
+          initData.token
+        );
 
-        if (uploadError) {
-          throw uploadError;
-        }
+        setUploadStage(
+          "Finalizing..."
+        );
 
         const activateResponse =
           await fetch(
             FUNCTION_URL,
             {
-              method: "POST",
+              method:
+                "POST",
 
               headers: {
                 "Content-Type":
@@ -562,6 +826,14 @@ export default function Home() {
           TRANSFER_SECONDS
         );
 
+        setUploadProgress(
+          100
+        );
+
+        setUploadStage(
+          "Uploaded"
+        );
+
         setMessage(
           "File uploaded successfully."
         );
@@ -575,14 +847,15 @@ export default function Home() {
 
         setTransferCode("");
         setExpiresAt(null);
-        setRemainingSeconds(0);
       } finally {
-        setUploading(false);
+        setUploading(
+          false
+        );
       }
     };
 
   /* =====================================================
-     DOWNLOAD
+     DOWNLOAD WITH PROGRESS
   ===================================================== */
 
   const downloadFile =
@@ -602,16 +875,32 @@ export default function Home() {
         return;
       }
 
-      setDownloading(true);
+      setDownloading(
+        true
+      );
+
+      setDownloadProgress(
+        0
+      );
+
+      setDownloadedBytes(
+        0
+      );
+
+      setDownloadTotal(
+        0
+      );
+
       setError("");
       setMessage("");
 
       try {
-        const response =
+        const prepareResponse =
           await fetch(
             FUNCTION_URL,
             {
-              method: "POST",
+              method:
+                "POST",
 
               headers: {
                 "Content-Type":
@@ -628,10 +917,10 @@ export default function Home() {
           );
 
         const data =
-          await response.json();
+          await prepareResponse.json();
 
         if (
-          !response.ok
+          !prepareResponse.ok
         ) {
           throw new Error(
             data.error ||
@@ -639,21 +928,111 @@ export default function Home() {
           );
         }
 
-        const fileResponse =
+        const response =
           await fetch(
             data.url
           );
 
         if (
-          !fileResponse.ok
+          !response.ok
         ) {
           throw new Error(
             "Unable to download file."
           );
         }
 
+        const total =
+          Number(
+            response.headers.get(
+              "content-length"
+            )
+          ) ||
+          Number(
+            data.fileSize
+          ) ||
+          0;
+
+        setDownloadTotal(
+          total
+        );
+
+        const chunks =
+          [];
+
+        let received = 0;
+
+        if (
+          response.body
+        ) {
+          const reader =
+            response.body.getReader();
+
+          while (true) {
+            const {
+              done,
+              value,
+            } =
+              await reader.read();
+
+            if (done) break;
+
+            chunks.push(
+              value
+            );
+
+            received +=
+              value.byteLength;
+
+            setDownloadedBytes(
+              received
+            );
+
+            if (total > 0) {
+              setDownloadProgress(
+                Math.min(
+                  100,
+                  Math.round(
+                    (received /
+                      total) *
+                      100
+                  )
+                )
+              );
+            }
+          }
+        } else {
+          const blob =
+            await response.blob();
+
+          chunks.push(
+            blob
+          );
+
+          received =
+            blob.size;
+
+          setDownloadedBytes(
+            received
+          );
+
+          setDownloadProgress(
+            100
+          );
+        }
+
         const blob =
-          await fileResponse.blob();
+          new Blob(
+            chunks,
+            {
+              type:
+                data.mimeType ||
+                "application/octet-stream",
+            }
+          );
+
+        setDownloadProgress(
+          100
+        );
 
         const blobUrl =
           URL.createObjectURL(
@@ -686,13 +1065,19 @@ export default function Home() {
               blobUrl
             );
           },
-          1000
+          2000
         );
+
+        /*
+          Delete only AFTER the complete
+          file has been downloaded.
+        */
 
         await fetch(
           FUNCTION_URL,
           {
-            method: "POST",
+            method:
+              "POST",
 
             headers: {
               "Content-Type":
@@ -703,7 +1088,8 @@ export default function Home() {
               action:
                 "complete-download",
 
-              id: data.id,
+              id:
+                data.id,
             }),
           }
         );
@@ -721,72 +1107,21 @@ export default function Home() {
             "Download failed."
         );
       } finally {
-        setDownloading(false);
+        setDownloading(
+          false
+        );
       }
     };
 
   /* =====================================================
-     QR
+     QR LINK
   ===================================================== */
 
   const qrValue =
     origin &&
     transferCode
-      ? `${origin}/?code=${transferCode}`
+      ? `${origin}/share?code=${transferCode}`
       : "";
-
-  /* =====================================================
-     QR AUTO DOWNLOAD
-  ===================================================== */
-
-  useEffect(() => {
-    if (
-      qrAttempted.current
-    ) {
-      return;
-    }
-
-    const params =
-      new URLSearchParams(
-        window.location.search
-      );
-
-    const code =
-      params.get("code");
-
-    if (
-      code &&
-      /^\d{5}$/.test(
-        code
-      )
-    ) {
-      qrAttempted.current =
-        true;
-
-      setReceiveCode(
-        code
-      );
-
-      setMessage(
-        "Transfer found. Starting download..."
-      );
-
-      const timer =
-        setTimeout(
-          () => {
-            downloadFile(
-              code
-            );
-          },
-          700
-        );
-
-      return () =>
-        clearTimeout(
-          timer
-        );
-    }
-  }, []);
 
   /* =====================================================
      RESET
@@ -794,7 +1129,7 @@ export default function Home() {
 
   const resetUpload =
     () => {
-      setFile(null);
+      setFiles([]);
 
       setTransferCode("");
 
@@ -803,6 +1138,12 @@ export default function Home() {
       setRemainingSeconds(
         0
       );
+
+      setUploadProgress(
+        0
+      );
+
+      setUploadStage("");
 
       setMessage("");
 
@@ -815,6 +1156,17 @@ export default function Home() {
           "";
       }
     };
+
+  /* =====================================================
+     SELECTED FILE TOTAL
+  ===================================================== */
+
+  const totalSelectedSize =
+    files.reduce(
+      (sum, item) =>
+        sum + item.size,
+      0
+    );
 
   /* =====================================================
      UI
@@ -856,13 +1208,10 @@ export default function Home() {
 
           <div className="header-actions">
 
-            {/* LIVE USERS */}
-
             <div
               className="live-users-badge"
               title="Currently active visitors"
             >
-
               <span className="live-users-dot" />
 
               <strong>
@@ -872,10 +1221,7 @@ export default function Home() {
               <span>
                 Live
               </span>
-
             </div>
-
-            {/* THEME */}
 
             <button
               type="button"
@@ -883,7 +1229,6 @@ export default function Home() {
               onClick={
                 toggleTheme
               }
-              aria-label="Toggle theme"
             >
               {theme ===
               "dark"
@@ -916,7 +1261,7 @@ export default function Home() {
 
         </section>
 
-        {/* TRANSFER GRID */}
+        {/* TRANSFER */}
 
         <div className="transfer-grid">
 
@@ -948,13 +1293,29 @@ export default function Home() {
 
               <>
 
-                <label className="drop-zone">
+                <label
+                  className={`drop-zone ${
+                    dragActive
+                      ? "drag-active"
+                      : ""
+                  }`}
+                  onDragOver={
+                    handleDragOver
+                  }
+                  onDragLeave={
+                    handleDragLeave
+                  }
+                  onDrop={
+                    handleDrop
+                  }
+                >
 
                   <input
                     ref={
                       fileInputRef
                     }
                     type="file"
+                    multiple
                     hidden
                     onChange={
                       handleFileSelect
@@ -965,23 +1326,22 @@ export default function Home() {
                     ↑
                   </div>
 
-                  {file ? (
+                  {files.length ===
+                  0 ? (
 
                     <>
 
-                      <strong
-                        title={
-                          file.name
-                        }
-                      >
-                        {file.name}
+                      <strong>
+                        Drop files here
                       </strong>
 
                       <span>
-                        {formatFileSize(
-                          file.size
-                        )}
+                        or click to browse your device
                       </span>
+
+                      <small>
+                        Up to 10 files • 50 MB total
+                      </small>
 
                     </>
 
@@ -990,32 +1350,128 @@ export default function Home() {
                     <>
 
                       <strong>
-                        Choose a file
+                        {files.length ===
+                        1
+                          ? files[0]
+                              .name
+                          : `${files.length} files selected`}
                       </strong>
 
                       <span>
-                        Click here to browse your device
+                        {formatBytes(
+                          totalSelectedSize
+                        )}
                       </span>
+
+                      <small>
+                        Click to change files
+                      </small>
 
                     </>
 
                   )}
 
-                  <small>
-                    Maximum file size: 50 MB
-                  </small>
-
                 </label>
+
+                {files.length >
+                  0 && (
+
+                  <div className="selected-files">
+
+                    {files
+                      .slice(
+                        0,
+                        4
+                      )
+                      .map(
+                        (
+                          item,
+                          index
+                        ) => (
+
+                          <div
+                            className="selected-file"
+                            key={`${item.name}-${index}`}
+                          >
+
+                            <span>
+                              ✓
+                            </span>
+
+                            <strong
+                              title={
+                                item.name
+                              }
+                            >
+                              {
+                                item.name
+                              }
+                            </strong>
+
+                            <small>
+                              {formatBytes(
+                                item.size
+                              )}
+                            </small>
+
+                          </div>
+
+                        )
+                      )}
+
+                    {files.length >
+                      4 && (
+
+                      <div className="more-files">
+                        +
+                        {files.length -
+                          4}{" "}
+                        more files
+                      </div>
+
+                    )}
+
+                  </div>
+
+                )}
 
                 {uploading && (
 
-                  <div className="uploading-state">
+                  <div className="progress-panel">
 
-                    <span className="upload-spinner" />
+                    <div className="progress-header">
 
-                    <span>
-                      Uploading file...
-                    </span>
+                      <span>
+                        {uploadStage ||
+                          "Uploading..."}
+                      </span>
+
+                      <strong>
+                        {
+                          uploadProgress
+                        }
+                        %
+                      </strong>
+
+                    </div>
+
+                    <div className="progress-track">
+
+                      <div
+                        className="progress-fill"
+                        style={{
+                          width: `${uploadProgress}%`,
+                        }}
+                      />
+
+                    </div>
+
+                    <div className="progress-detail">
+                      {files.length >
+                      1
+                        ? "Creating and uploading ZIP"
+                        : "Uploading securely"}
+                    </div>
 
                   </div>
 
@@ -1025,16 +1481,19 @@ export default function Home() {
                   type="button"
                   className="primary-button"
                   disabled={
-                    !file ||
+                    !files.length ||
                     uploading
                   }
                   onClick={
-                    uploadFile
+                    uploadFiles
                   }
                 >
 
                   {uploading
-                    ? "Uploading..."
+                    ? `${uploadProgress}%`
+                    : files.length >
+                      1
+                    ? `Upload ${files.length} files`
                     : "Upload File"}
 
                   {!uploading && (
@@ -1074,10 +1533,16 @@ export default function Home() {
                       <span
                         className="file-name"
                         title={
-                          file?.name
+                          files.length >
+                          1
+                            ? `${files.length} files`
+                            : files[0]?.name
                         }
                       >
-                        {file?.name}
+                        {files.length >
+                        1
+                          ? `${files.length} files • ZIP archive`
+                          : files[0]?.name}
                       </span>
 
                     </div>
@@ -1089,7 +1554,9 @@ export default function Home() {
                     <div className="transfer-code-box">
 
                       <span className="transfer-code">
-                        {transferCode}
+                        {
+                          transferCode
+                        }
                       </span>
 
                     </div>
@@ -1099,7 +1566,9 @@ export default function Home() {
                       Expires in{" "}
 
                       <strong>
-                        {formatTime()}
+                        {formatTime(
+                          remainingSeconds
+                        )}
                       </strong>
 
                     </div>
@@ -1144,7 +1613,7 @@ export default function Home() {
                     </div>
 
                     <span className="qr-hint">
-                      Scan with your phone camera
+                      Opens a secure download page
                     </span>
 
                   </div>
@@ -1202,7 +1671,6 @@ export default function Home() {
                 ) => {
 
                   setError("");
-
                   setMessage("");
 
                   setReceiveCode(
@@ -1226,6 +1694,53 @@ export default function Home() {
 
             </div>
 
+            {downloading && (
+
+              <div className="download-progress-panel">
+
+                <div className="progress-header">
+
+                  <span>
+                    Downloading
+                  </span>
+
+                  <strong>
+                    {downloadProgress}%
+                  </strong>
+
+                </div>
+
+                <div className="progress-track">
+
+                  <div
+                    className="progress-fill download-fill"
+                    style={{
+                      width: `${downloadProgress}%`,
+                    }}
+                  />
+
+                </div>
+
+                <div className="progress-detail">
+
+                  {formatBytes(
+                    downloadedBytes
+                  )}
+
+                  {" / "}
+
+                  {downloadTotal
+                    ? formatBytes(
+                        downloadTotal
+                      )
+                    : "Calculating..."}
+
+                </div>
+
+              </div>
+
+            )}
+
             <button
               type="button"
               className="secondary-button"
@@ -1240,7 +1755,7 @@ export default function Home() {
             >
 
               {downloading
-                ? "Downloading..."
+                ? `${downloadProgress}%`
                 : "Find File"}
 
               <span>
@@ -1278,33 +1793,24 @@ export default function Home() {
         <div className="info-row">
 
           <div>
-
             <span className="info-icon">
               ⚡
             </span>
-
             Quick transfer
-
           </div>
 
           <div>
-
             <span className="info-icon">
               🔒
             </span>
-
             Private files
-
           </div>
 
           <div>
-
             <span className="info-icon">
               ⌛
             </span>
-
             Auto deleted
-
           </div>
 
         </div>
