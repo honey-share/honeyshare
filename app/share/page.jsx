@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  createClient,
+} from "@supabase/supabase-js";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -9,8 +16,45 @@ const SUPABASE_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-const FUNCTION_URL =
-  `${SUPABASE_URL}/functions/v1/transfer-v2`;
+const supabase =
+  createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+async function callTransferFunction(
+  action,
+  payload = {}
+) {
+  const {
+    data,
+    error,
+  } =
+    await supabase.functions.invoke(
+      "transfer-v2",
+      {
+        body: {
+          action,
+          ...payload,
+        },
+      }
+    );
+
+  if (error) {
+    throw new Error(
+      error.message ||
+        "Unable to contact HoneyShare server."
+    );
+  }
+
+  if (data?.error) {
+    throw new Error(
+      data.error
+    );
+  }
+
+  return data;
+}
 
 function formatBytes(bytes) {
   if (!bytes) return "Unknown size";
@@ -19,8 +63,13 @@ function formatBytes(bytes) {
     return `${bytes} B`;
   }
 
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
+  if (
+    bytes <
+    1024 * 1024
+  ) {
+    return `${(
+      bytes / 1024
+    ).toFixed(1)} KB`;
   }
 
   return `${(
@@ -30,17 +79,22 @@ function formatBytes(bytes) {
 }
 
 function formatTime(seconds) {
-  const minutes = Math.floor(
-    seconds / 60
-  );
+  const minutes =
+    Math.floor(
+      seconds / 60
+    );
 
   const remaining =
     seconds % 60;
 
-  return `${String(minutes).padStart(
+  return `${String(
+    minutes
+  ).padStart(
     2,
     "0"
-  )}:${String(remaining).padStart(
+  )}:${String(
+    remaining
+  ).padStart(
     2,
     "0"
   )}`;
@@ -78,6 +132,8 @@ export default function SharePage() {
     useState(false);
 
   useEffect(() => {
+    let timer;
+
     const params =
       new URLSearchParams(
         window.location.search
@@ -101,42 +157,21 @@ export default function SharePage() {
       return;
     }
 
-    setCode(transferCode);
+    setCode(
+      transferCode
+    );
 
     const loadTransfer =
       async () => {
         try {
-          const response =
-            await fetch(
-              FUNCTION_URL,
+          const data =
+            await callTransferFunction(
+              "preview-download",
               {
-                method: "POST",
-
-                headers: {
-                  "Content-Type":
-                    "application/json",
-                },
-
-                body:
-                  JSON.stringify({
-                    action:
-                      "preview-download",
-
-                    code:
-                      transferCode,
-                  }),
+                code:
+                  transferCode,
               }
             );
-
-          const data =
-            await response.json();
-
-          if (!response.ok) {
-            throw new Error(
-              data.error ||
-                "File not found."
-            );
-          }
 
           setMeta(data);
 
@@ -161,15 +196,10 @@ export default function SharePage() {
 
           updateTimer();
 
-          const timer =
+          timer =
             setInterval(
               updateTimer,
               1000
-            );
-
-          return () =>
-            clearInterval(
-              timer
             );
         } catch (err) {
           setError(
@@ -182,6 +212,14 @@ export default function SharePage() {
       };
 
     loadTransfer();
+
+    return () => {
+      if (timer) {
+        clearInterval(
+          timer
+        );
+      }
+    };
   }, []);
 
   const downloadFile =
@@ -200,43 +238,22 @@ export default function SharePage() {
       setError("");
 
       try {
-        const prepareResponse =
-          await fetch(
-            FUNCTION_URL,
+        const data =
+          await callTransferFunction(
+            "prepare-download",
             {
-              method: "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-
-              body:
-                JSON.stringify({
-                  action:
-                    "prepare-download",
-
-                  code,
-                }),
+              code,
             }
           );
-
-        const data =
-          await prepareResponse.json();
-
-        if (!prepareResponse.ok) {
-          throw new Error(
-            data.error ||
-              "File is no longer available."
-          );
-        }
 
         const response =
           await fetch(
             data.url
           );
 
-        if (!response.ok) {
+        if (
+          !response.ok
+        ) {
           throw new Error(
             "Download failed."
           );
@@ -253,28 +270,36 @@ export default function SharePage() {
           ) ||
           0;
 
-        setDownloadTotal(total);
+        setDownloadTotal(
+          total
+        );
 
-        const chunks = [];
+        const chunks =
+          [];
 
-        let received = 0;
+        let received =
+          0;
 
-        if (response.body) {
+        if (
+          response.body
+        ) {
           const reader =
             response.body.getReader();
 
           while (true) {
             const {
-              done: streamDone,
+              done,
               value,
             } =
               await reader.read();
 
-            if (streamDone) {
+            if (done) {
               break;
             }
 
-            chunks.push(value);
+            chunks.push(
+              value
+            );
 
             received +=
               value.byteLength;
@@ -283,7 +308,10 @@ export default function SharePage() {
               received
             );
 
-            if (total > 0) {
+            if (
+              total >
+              0
+            ) {
               setProgress(
                 Math.min(
                   100,
@@ -308,7 +336,9 @@ export default function SharePage() {
             }
           );
 
-        setProgress(100);
+        setProgress(
+          100
+        );
 
         const url =
           URL.createObjectURL(
@@ -320,7 +350,8 @@ export default function SharePage() {
             "a"
           );
 
-        link.href = url;
+        link.href =
+          url;
 
         link.download =
           data.fileName ||
@@ -334,36 +365,27 @@ export default function SharePage() {
 
         link.remove();
 
-        setTimeout(() => {
-          URL.revokeObjectURL(
-            url
-          );
-        }, 2000);
+        setTimeout(
+          () => {
+            URL.revokeObjectURL(
+              url
+            );
+          },
+          2000
+        );
 
-        await fetch(
-          FUNCTION_URL,
+        await callTransferFunction(
+          "complete-download",
           {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body:
-              JSON.stringify({
-                action:
-                  "complete-download",
-
-                id:
-                  data.id,
-              }),
+            id: data.id,
           }
         );
 
         setDone(true);
       } catch (err) {
-        console.error(err);
+        console.error(
+          err
+        );
 
         setError(
           err?.message ||
@@ -400,6 +422,7 @@ export default function SharePage() {
     return (
       <main className="share-page">
         <div className="share-card">
+
           <div className="share-logo">
             H
           </div>
@@ -418,6 +441,7 @@ export default function SharePage() {
           >
             Go to HoneyShare
           </a>
+
         </div>
       </main>
     );
@@ -426,7 +450,9 @@ export default function SharePage() {
   if (done) {
     return (
       <main className="share-page">
+
         <div className="share-card">
+
           <div className="share-success-icon">
             ✓
           </div>
@@ -446,7 +472,9 @@ export default function SharePage() {
           >
             Share another file
           </a>
+
         </div>
+
       </main>
     );
   }
@@ -591,6 +619,7 @@ export default function SharePage() {
             downloading
           }
         >
+
           {downloading
             ? `Downloading ${progress}%`
             : "Download File"}
@@ -600,6 +629,7 @@ export default function SharePage() {
               ↓
             </span>
           )}
+
         </button>
 
         <p className="share-note">
@@ -608,6 +638,7 @@ export default function SharePage() {
         </p>
 
       </div>
+
     </main>
   );
 }
