@@ -5,35 +5,45 @@ import {
   Manrope,
 } from "next/font/google";
 
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-space",
-  display: "swap",
-  weight: [
-    "400",
-    "500",
-    "600",
-    "700",
-  ],
-});
+const spaceGrotesk =
+  Space_Grotesk({
+    subsets: ["latin"],
+    variable: "--font-space",
+    display: "swap",
+    weight: [
+      "400",
+      "500",
+      "600",
+      "700",
+    ],
+  });
 
-const manrope = Manrope({
-  subsets: ["latin"],
-  variable: "--font-manrope",
-  display: "swap",
-  weight: [
-    "400",
-    "500",
-    "600",
-    "700",
-    "800",
-  ],
-});
+const manrope =
+  Manrope({
+    subsets: ["latin"],
+    variable: "--font-manrope",
+    display: "swap",
+    weight: [
+      "400",
+      "500",
+      "600",
+      "700",
+      "800",
+    ],
+  });
 
 export const metadata = {
-  title: "HoneyShare",
+  title:
+    "HoneyShare — Fast. Simple. Temporary.",
   description:
-    "Fast, simple and temporary file sharing.",
+    "Fast, simple and temporary file sharing without an account.",
+  icons: {
+    icon: "/honeyshare.svg",
+    shortcut: "/honeyshare.svg",
+    apple:
+      "/honeyshare.svg",
+  },
+  themeColor: "#090e1d",
 };
 
 export default function RootLayout({
