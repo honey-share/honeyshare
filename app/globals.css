@@ -11,6 +11,7 @@ body {
 
 body {
   font-family: var(--font-manrope), Arial, sans-serif;
+
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -24,9 +25,9 @@ button {
   cursor: pointer;
 }
 
-/* =========================
+/* =====================================================
    PAGE
-========================= */
+===================================================== */
 
 .page {
   --bg: #090e1d;
@@ -42,9 +43,12 @@ button {
   --primary-text: #101526;
 
   position: relative;
+
   width: 100%;
   height: 100svh;
+
   min-height: 680px;
+
   overflow: hidden;
 
   background: var(--bg);
@@ -60,9 +64,9 @@ button {
     color 0.3s ease;
 }
 
-/* =========================
+/* =====================================================
    LIGHT MODE
-========================= */
+===================================================== */
 
 .page.light {
   --bg: #f3f5fa;
@@ -78,9 +82,9 @@ button {
   --primary-text: #ffffff;
 }
 
-/* =========================
+/* =====================================================
    BACKGROUND
-========================= */
+===================================================== */
 
 .background-glow {
   position: fixed;
@@ -101,12 +105,14 @@ button {
 
 .glow-one {
   background: #6253d9;
+
   top: -230px;
   left: -150px;
 }
 
 .glow-two {
   background: #00a98f;
+
   right: -150px;
   bottom: -240px;
 }
@@ -119,27 +125,34 @@ button {
   opacity: 0.055;
 }
 
-/* =========================
+/* =====================================================
    CONTAINER
-========================= */
+===================================================== */
 
 .container {
   position: relative;
+
   z-index: 1;
 
-  width: min(1100px, 100%);
+  width: min(
+    1100px,
+    100%
+  );
+
   max-height: 100%;
 
   margin: 0 auto;
 }
 
-/* =========================
+/* =====================================================
    HEADER
-========================= */
+===================================================== */
 
 .header {
   display: flex;
+
   align-items: center;
+
   justify-content: space-between;
 
   margin-bottom: 19px;
@@ -147,7 +160,9 @@ button {
 
 .brand {
   display: flex;
+
   align-items: center;
+
   gap: 13px;
 }
 
@@ -160,14 +175,19 @@ button {
   border-radius: 15px;
 
   display: grid;
+
   place-items: center;
 
   background: var(--primary-button);
+
   color: var(--primary-text);
 
-  font-family: var(--font-space), sans-serif;
+  font-family:
+    var(--font-space),
+    sans-serif;
 
   font-size: 24px;
+
   font-weight: 700;
 
   letter-spacing: -1px;
@@ -176,9 +196,12 @@ button {
 .header h1 {
   margin: 0;
 
-  font-family: var(--font-space), sans-serif;
+  font-family:
+    var(--font-space),
+    sans-serif;
 
   font-size: 23px;
+
   line-height: 1.05;
 
   letter-spacing: -0.7px;
@@ -192,14 +215,134 @@ button {
   color: var(--muted);
 
   font-size: 12px;
+
   line-height: 1;
 
   font-weight: 500;
 }
 
-/* =========================
+/* =====================================================
+   HEADER ACTIONS
+===================================================== */
+
+.header-actions {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+}
+
+/* =====================================================
+   LIVE USERS
+===================================================== */
+
+.live-users-badge {
+  height: 46px;
+
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  padding: 0 14px;
+
+  border-radius: 14px;
+
+  border: 1px solid var(--border);
+
+  background: var(--card);
+
+  color: var(--muted);
+
+  font-family:
+    var(--font-space),
+    sans-serif;
+
+  font-size: 12px;
+
+  font-weight: 600;
+
+  white-space: nowrap;
+
+  backdrop-filter: blur(15px);
+
+  box-shadow:
+    0 8px 25px
+    rgba(0, 0, 0, 0.06);
+
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.live-users-badge:hover {
+  transform: translateY(-1px);
+
+  border-color: #4b5879;
+}
+
+.live-users-badge strong {
+  color: var(--text);
+
+  font-size: 14px;
+
+  font-weight: 700;
+
+  font-variant-numeric:
+    tabular-nums;
+}
+
+.live-users-dot {
+  width: 8px;
+  height: 8px;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  background: #00b58d;
+
+  box-shadow:
+    0 0 0 4px
+    rgba(0, 181, 141, 0.10);
+
+  animation:
+    honey-live-pulse
+    1.8s ease-in-out
+    infinite;
+}
+
+@keyframes honey-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+
+    transform:
+      scale(1);
+  }
+
+  50% {
+    opacity: 0.45;
+
+    transform:
+      scale(0.85);
+  }
+}
+
+.page.light .live-users-badge {
+  background:
+    rgba(255, 255, 255, 0.9);
+
+  box-shadow:
+    0 8px 25px
+    rgba(30, 45, 80, 0.06);
+}
+
+/* =====================================================
    THEME
-========================= */
+===================================================== */
 
 .theme-toggle {
   width: 46px;
@@ -210,9 +353,11 @@ button {
   border: 1px solid var(--border);
 
   background: var(--card);
+
   color: var(--text);
 
   display: grid;
+
   place-items: center;
 
   font-size: 18px;
@@ -223,21 +368,26 @@ button {
 }
 
 .theme-toggle:hover {
-  transform: translateY(-2px);
-  border-color: #7164d6;
+  transform:
+    translateY(-2px);
+
+  border-color:
+    #7164d6;
 }
 
-/* =========================
+/* =====================================================
    HERO
-========================= */
+===================================================== */
 
 .hero {
   max-width: 800px;
+
   margin-bottom: 20px;
 }
 
 .badge {
   display: inline-flex;
+
   align-items: center;
 
   border: 1px solid var(--border);
@@ -248,9 +398,12 @@ button {
 
   border-radius: 999px;
 
-  font-family: var(--font-space), sans-serif;
+  font-family:
+    var(--font-space),
+    sans-serif;
 
   font-size: 11px;
+
   line-height: 1;
 
   font-weight: 700;
@@ -263,9 +416,16 @@ button {
 .hero h2 {
   margin: 0 0 13px;
 
-  font-family: var(--font-space), sans-serif;
+  font-family:
+    var(--font-space),
+    sans-serif;
 
-  font-size: clamp(52px, 5vw, 68px);
+  font-size:
+    clamp(
+      52px,
+      5vw,
+      68px
+    );
 
   line-height: 0.98;
 
@@ -288,9 +448,9 @@ button {
   margin: 0;
 }
 
-/* =========================
+/* =====================================================
    GRID
-========================= */
+===================================================== */
 
 .transfer-grid {
   display: grid;
@@ -302,9 +462,9 @@ button {
   gap: 18px;
 }
 
-/* =========================
+/* =====================================================
    CARD
-========================= */
+===================================================== */
 
 .card {
   background: var(--card);
@@ -318,17 +478,21 @@ button {
   backdrop-filter: blur(20px);
 
   box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.16);
+    0 20px 60px
+    rgba(0, 0, 0, 0.16);
 }
 
 .page.light .card {
   box-shadow:
-    0 20px 55px rgba(30, 45, 80, 0.08);
+    0 20px 55px
+    rgba(30, 45, 80, 0.08);
 }
 
 .card-top {
   display: flex;
+
   justify-content: space-between;
+
   align-items: flex-start;
 
   margin-bottom: 15px;
@@ -339,9 +503,12 @@ button {
 
   color: var(--muted);
 
-  font-family: var(--font-space), sans-serif;
+  font-family:
+    var(--font-space),
+    sans-serif;
 
   font-size: 11px;
+
   line-height: 1;
 
   font-weight: 700;
@@ -354,7 +521,9 @@ button {
 .card h3 {
   margin: 0;
 
-  font-family: var(--font-space), sans-serif;
+  font-family:
+    var(--font-space),
+    sans-serif;
 
   font-size: 28px;
 
@@ -365,9 +534,9 @@ button {
   font-weight: 700;
 }
 
-/* =========================
+/* =====================================================
    ICONS
-========================= */
+===================================================== */
 
 .icon-circle {
   width: 46px;
@@ -378,27 +547,33 @@ button {
   border-radius: 14px;
 
   display: grid;
+
   place-items: center;
 
-  font-family: var(--font-space), sans-serif;
+  font-family:
+    var(--font-space),
+    sans-serif;
 
   font-size: 24px;
+
   font-weight: 600;
 }
 
 .upload-icon {
   background: #e8ddff;
+
   color: #6246c7;
 }
 
 .download-icon {
   background: #d6fff2;
+
   color: #00876d;
 }
 
-/* =========================
+/* =====================================================
    DROP ZONE
-========================= */
+===================================================== */
 
 .drop-zone {
   min-height: 175px;
@@ -427,19 +602,31 @@ button {
 }
 
 .page.light .drop-zone {
-  border-color: #c6d0e2;
+  border-color:
+    #c6d0e2;
 }
 
 .drop-zone:hover {
-  border-color: #8b7cf6;
+  border-color:
+    #8b7cf6;
 
   background:
-    rgba(255, 255, 255, 0.025);
+    rgba(
+      255,
+      255,
+      255,
+      0.025
+    );
 }
 
 .page.light .drop-zone:hover {
   background:
-    rgba(80, 100, 160, 0.04);
+    rgba(
+      80,
+      100,
+      160,
+      0.04
+    );
 }
 
 .drop-icon {
@@ -449,13 +636,16 @@ button {
   border-radius: 14px;
 
   display: grid;
+
   place-items: center;
 
   background: #222c49;
 
   color: #c9c2ff;
 
-  font-family: var(--font-space), sans-serif;
+  font-family:
+    var(--font-space),
+    sans-serif;
 
   font-size: 26px;
 
@@ -464,11 +654,14 @@ button {
 
 .page.light .drop-icon {
   background: #edf0ff;
+
   color: #6655c9;
 }
 
 .drop-zone strong {
-  font-family: var(--font-space), sans-serif;
+  font-family:
+    var(--font-space),
+    sans-serif;
 
   font-size: 16px;
 
@@ -515,9 +708,9 @@ button {
   font-weight: 500;
 }
 
-/* =========================
+/* =====================================================
    BUTTONS
-========================= */
+===================================================== */
 
 .primary-button,
 .secondary-button {
@@ -539,7 +732,9 @@ button {
 
   gap: 12px;
 
-  font-family: var(--font-space), sans-serif;
+  font-family:
+    var(--font-space),
+    sans-serif;
 
   font-weight: 700;
 
@@ -552,37 +747,50 @@ button {
 }
 
 .primary-button {
-  background: var(--primary-button);
-  color: var(--primary-text);
+  background:
+    var(--primary-button);
+
+  color:
+    var(--primary-text);
 }
 
-.primary-button:hover:not(:disabled) {
-  transform: translateY(-2px);
+.primary-button:hover:not(
+  :disabled
+) {
+  transform:
+    translateY(-2px);
 }
 
 .primary-button:disabled,
 .secondary-button:disabled {
   opacity: 0.35;
+
   cursor: not-allowed;
 }
 
 .secondary-button {
-  background: var(--secondary);
+  background:
+    var(--secondary);
 
   color: var(--text);
 
-  border: 1px solid var(--border);
+  border:
+    1px solid var(--border);
 }
 
-.secondary-button:hover:not(:disabled) {
-  transform: translateY(-2px);
+.secondary-button:hover:not(
+  :disabled
+) {
+  transform:
+    translateY(-2px);
 
-  border-color: #596685;
+  border-color:
+    #596685;
 }
 
-/* =========================
+/* =====================================================
    RECEIVE
-========================= */
+===================================================== */
 
 .code-area {
   min-height: 175px;
@@ -611,11 +819,15 @@ button {
 
   height: 68px;
 
-  border: 1px solid var(--input-border);
+  border:
+    1px solid
+    var(--input-border);
 
-  background: var(--input);
+  background:
+    var(--input);
 
-  color: var(--text);
+  color:
+    var(--text);
 
   border-radius: 16px;
 
@@ -625,7 +837,9 @@ button {
 
   text-align: center;
 
-  font-family: var(--font-space), sans-serif;
+  font-family:
+    var(--font-space),
+    sans-serif;
 
   font-size: 31px;
 
@@ -639,14 +853,22 @@ button {
 }
 
 .code-area input:focus {
-  border-color: #8b7cf6;
+  border-color:
+    #8b7cf6;
 
   box-shadow:
-    0 0 0 3px rgba(139, 124, 246, 0.1);
+    0 0 0 3px
+    rgba(
+      139,
+      124,
+      246,
+      0.1
+    );
 }
 
 .code-area input::placeholder {
   color: var(--muted-2);
+
   opacity: 0.55;
 }
 
@@ -664,9 +886,9 @@ button {
   text-align: center;
 }
 
-/* =========================
-   UPLOAD
-========================= */
+/* =====================================================
+   UPLOADING
+===================================================== */
 
 .uploading-state {
   width: 100%;
@@ -692,25 +914,31 @@ button {
   width: 16px;
   height: 16px;
 
-  border: 2px solid var(--border);
+  border:
+    2px solid
+    var(--border);
 
-  border-top-color: #8b7cf6;
+  border-top-color:
+    #8b7cf6;
 
   border-radius: 50%;
 
   animation:
-    honey-spin 0.7s linear infinite;
+    honey-spin
+    0.7s linear
+    infinite;
 }
 
 @keyframes honey-spin {
   to {
-    transform: rotate(360deg);
+    transform:
+      rotate(360deg);
   }
 }
 
-/* =========================
+/* =====================================================
    SUCCESS
-========================= */
+===================================================== */
 
 .success-area {
   min-height: 335px;
@@ -738,11 +966,18 @@ button {
   border-radius: 999px;
 
   background:
-    rgba(0, 169, 130, 0.09);
+    rgba(
+      0,
+      169,
+      130,
+      0.09
+    );
 
   color: #00b58d;
 
-  font-family: var(--font-space), sans-serif;
+  font-family:
+    var(--font-space),
+    sans-serif;
 
   font-size: 12px;
 
@@ -765,16 +1000,17 @@ button {
 
   border-radius: 50%;
 
-  background: #00a982;
+  background:
+    #00a982;
 
   color: white;
 
   font-size: 11px;
 }
 
-/* =========================
+/* =====================================================
    SUCCESS CONTENT
-========================= */
+===================================================== */
 
 .success-content {
   width: 100%;
@@ -817,7 +1053,9 @@ button {
 .qr-label {
   color: var(--muted-2);
 
-  font-family: var(--font-space), sans-serif;
+  font-family:
+    var(--font-space),
+    sans-serif;
 
   font-size: 10px;
 
@@ -833,7 +1071,9 @@ button {
 
   color: var(--muted);
 
-  font-family: var(--font-manrope), sans-serif;
+  font-family:
+    var(--font-manrope),
+    sans-serif;
 
   font-size: 13px;
 
@@ -848,9 +1088,9 @@ button {
   white-space: nowrap;
 }
 
-/* =========================
+/* =====================================================
    TRANSFER CODE
-========================= */
+===================================================== */
 
 .code-label {
   margin-bottom: 9px;
@@ -871,15 +1111,20 @@ button {
 
   border-radius: 17px;
 
-  border: 1px solid var(--border);
+  border:
+    1px solid
+    var(--border);
 
-  background: var(--input);
+  background:
+    var(--input);
 }
 
 .transfer-code {
   color: var(--text);
 
-  font-family: var(--font-space), sans-serif;
+  font-family:
+    var(--font-space),
+    sans-serif;
 
   font-size: 37px;
 
@@ -889,7 +1134,8 @@ button {
 
   padding-left: 9px;
 
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric:
+    tabular-nums;
 }
 
 .expiry {
@@ -907,11 +1153,14 @@ button {
 .expiry strong {
   color: var(--text);
 
-  font-family: var(--font-space), sans-serif;
+  font-family:
+    var(--font-space),
+    sans-serif;
 
   font-weight: 700;
 
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric:
+    tabular-nums;
 }
 
 .reset-button {
@@ -936,9 +1185,9 @@ button {
   color: var(--text);
 }
 
-/* =========================
+/* =====================================================
    QR
-========================= */
+===================================================== */
 
 .qr-section {
   display: flex;
@@ -969,7 +1218,8 @@ button {
   place-items: center;
 
   box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.16);
+    0 10px 30px
+    rgba(0, 0, 0, 0.16);
 }
 
 .qr-box canvas {
@@ -980,6 +1230,7 @@ button {
   height: 168px !important;
 
   max-width: 100%;
+
   max-height: 100%;
 }
 
@@ -997,9 +1248,9 @@ button {
   text-align: center;
 }
 
-/* =========================
+/* =====================================================
    STATUS
-========================= */
+===================================================== */
 
 .status-message {
   width: 100%;
@@ -1021,27 +1272,49 @@ button {
 
 .status-message.success {
   background:
-    rgba(0, 190, 150, 0.08);
+    rgba(
+      0,
+      190,
+      150,
+      0.08
+    );
 
   border:
-    1px solid rgba(0, 190, 150, 0.2);
+    1px solid
+    rgba(
+      0,
+      190,
+      150,
+      0.2
+    );
 
   color: #00b58d;
 }
 
 .status-message.error {
   background:
-    rgba(240, 80, 90, 0.08);
+    rgba(
+      240,
+      80,
+      90,
+      0.08
+    );
 
   border:
-    1px solid rgba(240, 80, 90, 0.2);
+    1px solid
+    rgba(
+      240,
+      80,
+      90,
+      0.2
+    );
 
   color: #e66a73;
 }
 
-/* =========================
+/* =====================================================
    INFO
-========================= */
+===================================================== */
 
 .info-row {
   display: flex;
@@ -1073,9 +1346,9 @@ button {
   font-size: 14px;
 }
 
-/* =========================
+/* =====================================================
    FOOTER
-========================= */
+===================================================== */
 
 footer {
   display: flex;
@@ -1098,7 +1371,9 @@ footer {
 footer span:first-child {
   color: var(--muted);
 
-  font-family: var(--font-space), sans-serif;
+  font-family:
+    var(--font-space),
+    sans-serif;
 
   font-weight: 700;
 }
@@ -1108,16 +1383,17 @@ footer a {
 
   text-decoration: none;
 
-  transition: color 0.2s ease;
+  transition:
+    color 0.2s ease;
 }
 
 footer a:hover {
   color: var(--text);
 }
 
-/* =========================
+/* =====================================================
    SHORT DESKTOP
-========================= */
+===================================================== */
 
 @media
   (min-width: 761px)
@@ -1125,6 +1401,7 @@ footer a:hover {
 
   .page {
     padding-top: 13px;
+
     padding-bottom: 13px;
   }
 
@@ -1138,6 +1415,7 @@ footer a:hover {
 
   .hero h2 {
     font-size: 52px;
+
     margin-bottom: 8px;
   }
 
@@ -1186,17 +1464,30 @@ footer a:hover {
 
   .info-row {
     margin-top: 8px;
+
     font-size: 12px;
   }
 
   footer {
     font-size: 11px;
   }
+
+  .live-users-badge {
+    height: 40px;
+
+    padding: 0 11px;
+
+    font-size: 11px;
+  }
+
+  .live-users-badge strong {
+    font-size: 13px;
+  }
 }
 
-/* =========================
+/* =====================================================
    MOBILE
-========================= */
+===================================================== */
 
 @media (max-width: 760px) {
 
@@ -1207,7 +1498,10 @@ footer a:hover {
 
     overflow: visible;
 
-    padding: 18px 14px 24px;
+    padding:
+      18px
+      14px
+      24px;
   }
 
   .container {
@@ -1216,6 +1510,34 @@ footer a:hover {
 
   .header {
     margin-bottom: 25px;
+  }
+
+  .header-actions {
+    gap: 7px;
+  }
+
+  .live-users-badge {
+    height: 40px;
+
+    padding: 0 10px;
+
+    font-size: 10px;
+  }
+
+  .live-users-badge strong {
+    font-size: 12px;
+  }
+
+  .live-users-dot {
+    width: 7px;
+    height: 7px;
+  }
+
+  .theme-toggle {
+    width: 40px;
+    height: 40px;
+
+    border-radius: 12px;
   }
 
   .hero {
@@ -1277,9 +1599,9 @@ footer a:hover {
   }
 }
 
-/* =========================
+/* =====================================================
    SMALL MOBILE
-========================= */
+===================================================== */
 
 @media (max-width: 380px) {
 
@@ -1311,5 +1633,13 @@ footer a:hover {
 
   .info-row {
     font-size: 12px;
+  }
+
+  .live-users-badge {
+    padding: 0 8px;
+  }
+
+  .live-users-badge span:last-child {
+    display: none;
   }
 }
