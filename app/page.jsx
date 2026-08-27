@@ -6,18 +6,11 @@ import {
   useState,
 } from "react";
 
-import {
-  createClient,
-} from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 
-import {
-  QRCodeCanvas,
-} from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react";
 
 import JSZip from "jszip";
-
-import * as tus from "tus-js-client";
-
 
 /* =====================================================
    CONFIG
@@ -30,10 +23,17 @@ const SUPABASE_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+const FUNCTION_URL =
+  `${SUPABASE_URL}/functions/v1/transfer-v2`;
+
+const STORAGE_BUCKET =
+  "temporary-files";
+
 const MAX_FILE_SIZE =
   50 * 1024 * 1024;
 
-const MAX_FILES = 10;
+const MAX_FILES =
+  10;
 
 const TRANSFER_SECONDS =
   5 * 60;
@@ -44,8 +44,6 @@ const VISITOR_STORAGE_KEY =
 const PRESENCE_CHANNEL =
   "honeyshare-live-users";
 
-const STORAGE_BUCKET =
-  "temporary-files";
 
 const supabase =
   createClient(
@@ -55,93 +53,13 @@ const supabase =
 
 
 /* =====================================================
-   EDGE FUNCTION
-===================================================== */
-
-async function callTransferFunction(
-  action,
-  payload = {}
-) {
-  const {
-    data,
-    error,
-  } =
-    await supabase.functions.invoke(
-      "transfer-v2",
-      {
-        body: {
-          action,
-          ...payload,
-        },
-      }
-    );
-
-  if (error) {
-    console.error(
-      "transfer-v2 error:",
-      error
-    );
-
-    throw new Error(
-      error.message ||
-        "Unable to contact HoneyShare server."
-    );
-  }
-
-  if (data?.error) {
-    throw new Error(
-      data.error
-    );
-  }
-
-  return data;
-}
-
-
-/* =====================================================
-   VISITOR ID
-===================================================== */
-
-function getVisitorId() {
-  try {
-    let visitorId =
-      localStorage.getItem(
-        VISITOR_STORAGE_KEY
-      );
-
-    if (!visitorId) {
-      visitorId =
-        typeof crypto !==
-          "undefined" &&
-        crypto.randomUUID
-          ? crypto.randomUUID()
-          : `visitor-${Date.now()}-${Math.random()
-              .toString(36)
-              .slice(2, 10)}`;
-
-      localStorage.setItem(
-        VISITOR_STORAGE_KEY,
-        visitorId
-      );
-    }
-
-    return visitorId;
-  } catch {
-    return `visitor-${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2, 10)}`;
-  }
-}
-
-
-/* =====================================================
    HELPERS
 ===================================================== */
 
 function formatBytes(
   bytes
 ) {
-  if (!bytes) {
+  if (!bytes || bytes <= 0) {
     return "0 B";
   }
 
@@ -193,8 +111,79 @@ function formatTime(
 }
 
 
+function getVisitorId() {
+  try {
+    let id =
+      localStorage.getItem(
+        VISITOR_STORAGE_KEY
+      );
+
+    if (!id) {
+      id =
+        typeof crypto !==
+          "undefined" &&
+        crypto.randomUUID
+          ? crypto.randomUUID()
+          : `visitor-${Date.now()}-${Math.random()
+              .toString(36)
+              .slice(2)}`;
+
+      localStorage.setItem(
+        VISITOR_STORAGE_KEY,
+        id
+      );
+    }
+
+    return id;
+  } catch {
+    return `visitor-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2)}`;
+  }
+}
+
+
 /* =====================================================
-   HOME
+   TRANSFER FUNCTION
+===================================================== */
+
+async function callTransferFunction(
+  action,
+  payload = {}
+) {
+  const {
+    data,
+    error,
+  } =
+    await supabase.functions.invoke(
+      "transfer-v2",
+      {
+        body: {
+          action,
+          ...payload,
+        },
+      }
+    );
+
+  if (error) {
+    throw new Error(
+      error.message ||
+        "Unable to contact transfer server."
+    );
+  }
+
+  if (data?.error) {
+    throw new Error(
+      data.error
+    );
+  }
+
+  return data;
+}
+
+
+/* =====================================================
+   MAIN
 ===================================================== */
 
 export default function Home() {
@@ -412,6 +401,10 @@ export default function Home() {
     }
 
 
+    /* ---------------------------------------------
+       VISITOR
+    --------------------------------------------- */
+
     const visitorId =
       getVisitorId();
 
@@ -425,27 +418,13 @@ export default function Home() {
 
         try {
 
-          const {
-            error:
-              visitorError,
-          } =
-            await supabase.rpc(
-              "record_visitor",
-              {
-                p_visitor_id:
-                  visitorId,
-              }
-            );
-
-
-          if (
-            visitorError
-          ) {
-            console.error(
-              "Visitor tracking error:",
-              visitorError
-            );
-          }
+          await supabase.rpc(
+            "record_visitor",
+            {
+              p_visitor_id:
+                visitorId,
+            }
+          );
 
         } catch (
           err
@@ -465,7 +444,7 @@ export default function Home() {
 
 
     /* ---------------------------------------------
-       REALTIME PRESENCE
+       LIVE PRESENCE
     --------------------------------------------- */
 
     const channel =
@@ -560,7 +539,7 @@ export default function Home() {
           ) {
 
             console.error(
-              "Presence tracking error:",
+              "Presence error:",
               err
             );
 
@@ -593,7 +572,7 @@ export default function Home() {
 
 
   /* ===================================================
-     TIMER
+     EXPIRY TIMER
   =================================================== */
 
   useEffect(() => {
@@ -646,7 +625,6 @@ export default function Home() {
           setExpiresAt(
             null
           );
-
 
           setMessage(
             "Transfer expired. The file will be removed automatically."
@@ -705,7 +683,7 @@ export default function Home() {
 
 
   /* ===================================================
-     FILE VALIDATION
+     VALIDATE FILES
   =================================================== */
 
   const validateFiles =
@@ -747,11 +725,11 @@ export default function Home() {
       const totalSize =
         selected.reduce(
           (
-            sum,
-            item
+            total,
+            file
           ) =>
-            sum +
-            item.size,
+            total +
+            file.size,
           0
         );
 
@@ -759,9 +737,9 @@ export default function Home() {
       const oversized =
         selected.some(
           (
-            item
+            file
           ) =>
-            item.size >
+            file.size >
             MAX_FILE_SIZE
         );
 
@@ -827,9 +805,9 @@ export default function Home() {
 
       setFiles(
         (
-          currentFiles
+          current
         ) =>
-          currentFiles.filter(
+          current.filter(
             (
               _,
               index
@@ -857,7 +835,7 @@ export default function Home() {
 
 
   /* ===================================================
-     DRAG
+     DRAG & DROP
   =================================================== */
 
   const handleDragOver =
@@ -899,6 +877,7 @@ export default function Home() {
         false
       );
 
+
       validateFiles(
         event.dataTransfer.files
       );
@@ -907,7 +886,7 @@ export default function Home() {
 
 
   /* ===================================================
-     ZIP
+     CREATE ZIP
   =================================================== */
 
   const prepareUploadFile =
@@ -918,18 +897,11 @@ export default function Home() {
         1
       ) {
 
-        const singleFile =
-          files[0];
-
         setUploadTotalBytes(
-          singleFile.size
+          files[0].size
         );
 
-        setUploadedBytes(
-          0
-        );
-
-        return singleFile;
+        return files[0];
 
       }
 
@@ -938,16 +910,13 @@ export default function Home() {
         "Preparing ZIP..."
       );
 
-
       setUploadProgress(
         0
       );
 
-
       setUploadedBytes(
         0
       );
-
 
       setUploadTotalBytes(
         totalSelectedSize
@@ -960,12 +929,12 @@ export default function Home() {
 
       files.forEach(
         (
-          item
+          file
         ) => {
 
           zip.file(
-            item.name,
-            item
+            file.name,
+            file
           );
 
         }
@@ -989,19 +958,10 @@ export default function Home() {
             metadata
           ) => {
 
-            const percent =
+            setUploadProgress(
               Math.round(
                 metadata.percent
-              );
-
-            /*
-              During ZIP preparation, the percentage
-              belongs to ZIP generation, not network
-              upload. We display the stage clearly.
-            */
-
-            setUploadProgress(
-              percent
+              )
             );
 
           }
@@ -1033,308 +993,19 @@ export default function Home() {
 
 
   /* ===================================================
-     AUTH TOKEN
+     REAL SIGNED UPLOAD WITH XHR PROGRESS
+     
+     This keeps the same Supabase signed-upload
+     mechanism but uses XMLHttpRequest instead of
+     uploadToSignedUrl() so browser upload progress
+     is available.
   =================================================== */
 
-  const ensureAnonymousAccessToken =
-    async () => {
-
-      const {
-        data:
-          sessionData,
-      } =
-        await supabase.auth.getSession();
-
-
-      if (
-        sessionData
-          ?.session
-          ?.access_token
-      ) {
-
-        return (
-          sessionData
-            .session
-            .access_token
-        );
-
-      }
-
-
-      const {
-        data,
-        error:
-          signInError,
-      } =
-        await supabase.auth.signInAnonymously();
-
-
-      if (
-        signInError
-      ) {
-
-        throw new Error(
-          "Anonymous sign-in is not enabled in Supabase."
-        );
-
-      }
-
-
-      const accessToken =
-        data
-          ?.session
-          ?.access_token;
-
-
-      if (
-        !accessToken
-      ) {
-
-        throw new Error(
-          "Supabase did not return an anonymous access token."
-        );
-
-      }
-
-
-      return accessToken;
-
-    };
-
-
-  /* ===================================================
-     TUS UPLOAD
-  =================================================== */
-
-  const uploadToTusWithProgress =
-    async (
-      uploadFile,
-      token,
-      accessToken
-    ) => {
-
-      return new Promise(
-        (
-          resolve,
-          reject
-        ) => {
-
-          /*
-            IMPORTANT:
-            Use the project .supabase.co endpoint.
-          */
-
-          const hostname =
-            new URL(
-              SUPABASE_URL
-            ).hostname;
-
-
-          const projectRef =
-            hostname.split(
-              "."
-            )[0];
-
-
-          const endpoint =
-            `https://${projectRef}.supabase.co/storage/v1/upload/resumable`;
-
-
-          const upload =
-            new tus.Upload(
-              uploadFile,
-              {
-
-                endpoint,
-
-                headers: {
-
-                  authorization:
-                    `Bearer ${accessToken}`,
-
-                  apikey:
-                    SUPABASE_KEY,
-
-                  "x-signature":
-                    token,
-
-                },
-
-
-                chunkSize:
-                  6 *
-                  1024 *
-                  1024,
-
-
-                retryDelays: [
-                  0,
-                  3000,
-                  5000,
-                  10000,
-                  20000,
-                ],
-
-
-                uploadDataDuringCreation:
-                  true,
-
-
-                removeFingerprintOnSuccess:
-                  true,
-
-
-                metadata: {
-
-                  bucketName:
-                    STORAGE_BUCKET,
-
-                  objectName:
-                    uploadFile.name,
-
-                  contentType:
-                    uploadFile.type ||
-                    "application/octet-stream",
-
-                  cacheControl:
-                    "3600",
-
-                },
-
-
-                onError:
-                  (
-                    uploadError
-                  ) => {
-
-                    console.error(
-                      "TUS upload error:",
-                      uploadError
-                    );
-
-
-                    reject(
-                      uploadError
-                    );
-
-                  },
-
-
-                onProgress:
-                  (
-                    bytesUploadedNow,
-                    bytesTotalNow
-                  ) => {
-
-                    const percent =
-                      bytesTotalNow >
-                      0
-                        ? Math.min(
-                            100,
-                            Math.round(
-                              (bytesUploadedNow /
-                                bytesTotalNow) *
-                                100
-                            )
-                          )
-                        : 0;
-
-
-                    setUploadedBytes(
-                      bytesUploadedNow
-                    );
-
-
-                    setUploadTotalBytes(
-                      bytesTotalNow
-                    );
-
-
-                    setUploadProgress(
-                      percent
-                    );
-
-
-                    setUploadStage(
-                      `Uploading ${percent}%`
-                    );
-
-                  },
-
-
-                onSuccess:
-                  () => {
-
-                    setUploadedBytes(
-                      uploadFile.size
-                    );
-
-
-                    setUploadTotalBytes(
-                      uploadFile.size
-                    );
-
-
-                    setUploadProgress(
-                      100
-                    );
-
-
-                    setUploadStage(
-                      "Upload complete"
-                    );
-
-
-                    resolve();
-
-                  },
-
-              }
-            );
-
-
-          upload
-            .findPreviousUploads()
-            .then(
-              (
-                previousUploads
-              ) => {
-
-                if (
-                  previousUploads.length
-                ) {
-
-                  upload.resumeFromPreviousUpload(
-                    previousUploads[0]
-                  );
-
-                }
-
-
-                upload.start();
-
-              }
-            )
-            .catch(
-              reject
-            );
-
-        }
-      );
-
-    };
-
-
-  /* ===================================================
-     SIGNED UPLOAD FALLBACK WITH REAL XHR PROGRESS
-  =================================================== */
-
-  const uploadToSignedUrlFallback =
+  const uploadToSignedUrlWithProgress =
     async (
       uploadFile,
       path,
-      token,
-      accessToken
+      token
     ) => {
 
       return new Promise(
@@ -1345,7 +1016,37 @@ export default function Home() {
 
           try {
 
-            const baseUrl =
+            if (
+              !SUPABASE_URL
+            ) {
+
+              reject(
+                new Error(
+                  "Missing Supabase URL."
+                )
+              );
+
+              return;
+
+            }
+
+
+            if (
+              !SUPABASE_KEY
+            ) {
+
+              reject(
+                new Error(
+                  "Missing Supabase public/anon key."
+                )
+              );
+
+              return;
+
+            }
+
+
+            const cleanBase =
               SUPABASE_URL.replace(
                 /\/$/,
                 ""
@@ -1354,7 +1055,7 @@ export default function Home() {
 
             const cleanPath =
               String(
-                path || ""
+                path
               )
                 .split(
                   "/"
@@ -1372,8 +1073,13 @@ export default function Home() {
                 );
 
 
-            const uploadUrl =
-              `${baseUrl}/storage/v1/object/upload/sign/${cleanPath}?token=${encodeURIComponent(
+            /*
+              Same signed upload endpoint used by
+              Supabase Storage.
+            */
+
+            const signedUploadUrl =
+              `${cleanBase}/storage/v1/object/upload/sign/${cleanPath}?token=${encodeURIComponent(
                 token
               )}`;
 
@@ -1384,48 +1090,31 @@ export default function Home() {
 
             xhr.open(
               "POST",
-              uploadUrl,
+              signedUploadUrl,
               true
             );
 
 
             /*
-              THIS fixes the error:
-              "headers must have required property authorization"
+              Supabase client normally supplies these
+              default headers. We keep them here too.
             */
 
-            if (
-              accessToken
-            ) {
+            xhr.setRequestHeader(
+              "Authorization",
+              `Bearer ${SUPABASE_KEY}`
+            );
 
-              xhr.setRequestHeader(
-                "Authorization",
-                `Bearer ${accessToken}`
-              );
 
-            } else if (
+            xhr.setRequestHeader(
+              "apikey",
               SUPABASE_KEY
-            ) {
-
-              xhr.setRequestHeader(
-                "Authorization",
-                `Bearer ${SUPABASE_KEY}`
-              );
-
-            }
+            );
 
 
-            if (
-              SUPABASE_KEY
-            ) {
-
-              xhr.setRequestHeader(
-                "apikey",
-                SUPABASE_KEY
-              );
-
-            }
-
+            /*
+              Supabase signed upload expects FormData.
+            */
 
             const formData =
               new FormData();
@@ -1437,16 +1126,15 @@ export default function Home() {
             );
 
 
-            /*
-              Empty field name matches the upload
-              format used by Supabase signed upload.
-            */
-
             formData.append(
               "",
               uploadFile
             );
 
+
+            /*
+              Reset progress.
+            */
 
             setUploadedBytes(
               0
@@ -1468,6 +1156,10 @@ export default function Home() {
             );
 
 
+            /*
+              REAL browser upload progress.
+            */
+
             xhr.upload.onprogress =
               (
                 event
@@ -1476,28 +1168,42 @@ export default function Home() {
                 if (
                   !event.lengthComputable
                 ) {
+
                   return;
+
                 }
 
 
+                const currentBytes =
+                  event.loaded;
+
+
+                const totalBytes =
+                  event.total ||
+                  uploadFile.size;
+
+
                 const percent =
-                  Math.min(
-                    100,
-                    Math.round(
-                      (event.loaded /
-                        event.total) *
-                        100
-                    )
-                  );
+                  totalBytes >
+                  0
+                    ? Math.min(
+                        100,
+                        Math.round(
+                          (currentBytes /
+                            totalBytes) *
+                            100
+                        )
+                      )
+                    : 0;
 
 
                 setUploadedBytes(
-                  event.loaded
+                  currentBytes
                 );
 
 
                 setUploadTotalBytes(
-                  event.total
+                  totalBytes
                 );
 
 
@@ -1550,11 +1256,38 @@ export default function Home() {
                 }
 
 
+                let responseText =
+                  xhr.responseText;
+
+
+                try {
+
+                  const parsed =
+                    JSON.parse(
+                      xhr.responseText
+                    );
+
+
+                  if (
+                    parsed
+                      ?.message
+                  ) {
+
+                    responseText =
+                      parsed.message;
+
+                  }
+
+                } catch {
+                  /* Keep raw response */
+                }
+
+
                 reject(
                   new Error(
                     `Upload failed (${xhr.status}): ${
-                      xhr.responseText ||
-                      "Unknown error"
+                      responseText ||
+                      "Unknown Supabase Storage error."
                     }`
                   )
                 );
@@ -1567,7 +1300,7 @@ export default function Home() {
 
                 reject(
                   new Error(
-                    "Network error while uploading file."
+                    "Network error while uploading the file."
                   )
                 );
 
@@ -1590,7 +1323,6 @@ export default function Home() {
               formData
             );
 
-
           } catch (
             err
           ) {
@@ -1608,100 +1340,6 @@ export default function Home() {
 
 
   /* ===================================================
-     UPLOAD ROUTER
-  =================================================== */
-
-  const uploadWithProgress =
-    async (
-      uploadFile,
-      path,
-      token
-    ) => {
-
-      let tusError =
-        null;
-
-
-      /*
-        FIRST:
-        Try proper TUS upload.
-      */
-
-      try {
-
-        const accessToken =
-          await ensureAnonymousAccessToken();
-
-
-        await uploadToTusWithProgress(
-          uploadFile,
-          token,
-          accessToken
-        );
-
-
-        return;
-
-      } catch (
-        err
-      ) {
-
-        tusError =
-          err;
-
-
-        console.warn(
-          "TUS upload failed. Using signed XHR fallback.",
-          err
-        );
-
-      }
-
-
-      /*
-        SECOND:
-        Use signed upload with real browser
-        upload progress.
-      */
-
-      try {
-
-        const accessToken =
-          await ensureAnonymousAccessToken();
-
-
-        await uploadToSignedUrlFallback(
-          uploadFile,
-          path,
-          token,
-          accessToken
-        );
-
-
-        return;
-
-      } catch (
-        fallbackError
-      ) {
-
-        console.error(
-          "Signed upload fallback failed:",
-          fallbackError
-        );
-
-
-        throw new Error(
-          fallbackError?.message ||
-            tusError?.message ||
-            "Unable to upload file."
-        );
-
-      }
-
-    };
-
-
-  /* ===================================================
      UPLOAD
   =================================================== */
 
@@ -1712,7 +1350,9 @@ export default function Home() {
         !files.length ||
         uploading
       ) {
+
         return;
+
       }
 
 
@@ -1756,8 +1396,8 @@ export default function Home() {
 
 
         /*
-          Reset network upload progress
-          after ZIP preparation.
+          Network upload progress starts
+          from zero after ZIP preparation.
         */
 
         setUploadedBytes(
@@ -1781,7 +1421,7 @@ export default function Home() {
 
 
         /*
-          Create transfer on backend.
+          Same backend initialization as before.
         */
 
         const initData =
@@ -1812,16 +1452,22 @@ export default function Home() {
         }
 
 
+        if (
+          !initData?.path
+        ) {
+
+          throw new Error(
+            "Server did not return an upload path."
+          );
+
+        }
+
+
         /*
-          Actual network upload.
+          Actual upload with real XHR progress.
         */
 
-        setUploadStage(
-          "Uploading 0%"
-        );
-
-
-        await uploadWithProgress(
+        await uploadToSignedUrlWithProgress(
           uploadFile,
           initData.path,
           initData.token
@@ -1829,7 +1475,7 @@ export default function Home() {
 
 
         /*
-          Finalize transfer.
+          Activate transfer.
         */
 
         setUploadStage(
@@ -1889,7 +1535,6 @@ export default function Home() {
           "File uploaded successfully."
         );
 
-
       } catch (
         err
       ) {
@@ -1903,6 +1548,21 @@ export default function Home() {
         setError(
           err?.message ||
             "Upload failed. Please try again."
+        );
+
+
+        setTransferCode(
+          ""
+        );
+
+
+        setExpiresAt(
+          null
+        );
+
+
+        setRemainingSeconds(
+          0
         );
 
       } finally {
@@ -1977,6 +1637,17 @@ export default function Home() {
           );
 
 
+        if (
+          !data?.url
+        ) {
+
+          throw new Error(
+            "Server did not return a download URL."
+          );
+
+        }
+
+
         const response =
           await fetch(
             data.url
@@ -2041,7 +1712,9 @@ export default function Home() {
             if (
               done
             ) {
+
               break;
+
             }
 
 
@@ -2160,7 +1833,6 @@ export default function Home() {
           "Download complete. File deleted automatically."
         );
 
-
       } catch (
         err
       ) {
@@ -2194,7 +1866,7 @@ export default function Home() {
   const qrValue =
     origin &&
     transferCode
-      ? `${origin}/share?code=${transferCode}`
+      ? `${origin}/?code=${transferCode}`
       : "";
 
 
@@ -2217,6 +1889,7 @@ export default function Home() {
         0
       );
 
+
       setUploadProgress(
         0
       );
@@ -2232,6 +1905,7 @@ export default function Home() {
       setUploadStage(
         ""
       );
+
 
       setMessage("");
       setError("");
@@ -2250,7 +1924,7 @@ export default function Home() {
 
 
   /* ===================================================
-     TOTAL SIZE
+     SIZE
   =================================================== */
 
   const totalSelectedSize =
@@ -2266,7 +1940,7 @@ export default function Home() {
 
 
   /* ===================================================
-     RENDER
+     UI
   =================================================== */
 
   return (
@@ -2373,7 +2047,7 @@ export default function Home() {
         </section>
 
 
-        {/* TRANSFER GRID */}
+        {/* CARDS */}
 
         <div className="transfer-grid">
 
@@ -2407,7 +2081,7 @@ export default function Home() {
 
               <>
 
-                {/* DROP ZONE */}
+                {/* DROP */}
 
                 <label
                   className={`drop-zone ${
@@ -2513,13 +2187,13 @@ export default function Home() {
 
                     {files.map(
                       (
-                        item,
+                        file,
                         index
                       ) => (
 
                         <div
                           className="selected-file"
-                          key={`${item.name}-${item.lastModified}-${index}`}
+                          key={`${file.name}-${file.lastModified}-${index}`}
                         >
 
                           <span className="file-check">
@@ -2529,18 +2203,18 @@ export default function Home() {
 
                           <strong
                             title={
-                              item.name
+                              file.name
                             }
                           >
                             {
-                              item.name
+                              file.name
                             }
                           </strong>
 
 
                           <small>
                             {formatBytes(
-                              item.size
+                              file.size
                             )}
                           </small>
 
@@ -2548,8 +2222,8 @@ export default function Home() {
                           <button
                             type="button"
                             className="remove-file-button"
-                            aria-label={`Remove ${item.name}`}
                             title="Remove file"
+                            aria-label={`Remove ${file.name}`}
                             onClick={(
                               event
                             ) => {
@@ -2629,7 +2303,7 @@ export default function Home() {
                 )}
 
 
-                {/* UPLOAD BUTTON */}
+                {/* BUTTON */}
 
                 <button
                   type="button"
@@ -2663,7 +2337,7 @@ export default function Home() {
 
             ) : (
 
-              /* UPLOADED STATE */
+              /* UPLOADED */
 
               <div className="success-area">
 
@@ -2887,7 +2561,10 @@ export default function Home() {
 
 
                   <strong>
-                    {downloadProgress}%
+                    {
+                      downloadProgress
+                    }
+                    %
                   </strong>
 
                 </div>
