@@ -23,11 +23,10 @@ const VISITOR_STORAGE_KEY =
 const PRESENCE_CHANNEL =
   "honeyshare-live-users";
 
-const supabase =
-  createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-  );
+const supabase = createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
 
 /* =====================================================
    EDGE FUNCTION
@@ -40,16 +39,15 @@ async function callTransferFunction(
   const {
     data,
     error,
-  } =
-    await supabase.functions.invoke(
-      "transfer-v2",
-      {
-        body: {
-          action,
-          ...payload,
-        },
-      }
-    );
+  } = await supabase.functions.invoke(
+    "transfer-v2",
+    {
+      body: {
+        action,
+        ...payload,
+      },
+    }
+  );
 
   if (error) {
     console.error(
@@ -73,7 +71,7 @@ async function callTransferFunction(
 }
 
 /* =====================================================
-   VISITOR
+   VISITOR ID
 ===================================================== */
 
 function getVisitorId() {
@@ -158,18 +156,30 @@ function formatTime(seconds) {
 }
 
 /* =====================================================
-   MAIN
+   HOME
 ===================================================== */
 
 export default function Home() {
+  /* ===================================================
+     THEME
+  =================================================== */
+
   const [theme, setTheme] =
     useState("dark");
+
+  /* ===================================================
+     FILES
+  =================================================== */
 
   const [files, setFiles] =
     useState([]);
 
   const [dragActive, setDragActive] =
     useState(false);
+
+  /* ===================================================
+     UPLOAD
+  =================================================== */
 
   const [uploading, setUploading] =
     useState(false);
@@ -180,6 +190,16 @@ export default function Home() {
   const [uploadStage, setUploadStage] =
     useState("");
 
+  const [uploadedBytes, setUploadedBytes] =
+    useState(0);
+
+  const [uploadTotalBytes, setUploadTotalBytes] =
+    useState(0);
+
+  /* ===================================================
+     TRANSFER
+  =================================================== */
+
   const [transferCode, setTransferCode] =
     useState("");
 
@@ -188,6 +208,10 @@ export default function Home() {
 
   const [remainingSeconds, setRemainingSeconds] =
     useState(0);
+
+  /* ===================================================
+     DOWNLOAD
+  =================================================== */
 
   const [receiveCode, setReceiveCode] =
     useState("");
@@ -204,6 +228,10 @@ export default function Home() {
   const [downloadTotal, setDownloadTotal] =
     useState(0);
 
+  /* ===================================================
+     UI
+  =================================================== */
+
   const [message, setMessage] =
     useState("");
 
@@ -213,8 +241,16 @@ export default function Home() {
   const [origin, setOrigin] =
     useState("");
 
+  /* ===================================================
+     LIVE USERS
+  =================================================== */
+
   const [liveUsers, setLiveUsers] =
     useState(0);
+
+  /* ===================================================
+     REFS
+  =================================================== */
 
   const fileInputRef =
     useRef(null);
@@ -240,13 +276,15 @@ export default function Home() {
       savedTheme === "dark" ||
       savedTheme === "light"
     ) {
-      setTheme(savedTheme);
+      setTheme(
+        savedTheme
+      );
     }
 
     const visitorId =
       getVisitorId();
 
-    /* ANALYTICS */
+    /* Visitor analytics */
 
     const recordVisitor =
       async () => {
@@ -263,7 +301,9 @@ export default function Home() {
               }
             );
 
-          if (visitorError) {
+          if (
+            visitorError
+          ) {
             console.error(
               "Visitor tracking error:",
               visitorError
@@ -279,7 +319,7 @@ export default function Home() {
 
     recordVisitor();
 
-    /* REALTIME PRESENCE */
+    /* Realtime presence */
 
     const channel =
       supabase.channel(
@@ -312,7 +352,8 @@ export default function Home() {
     channel.on(
       "presence",
       {
-        event: "sync",
+        event:
+          "sync",
       },
       updateLiveUsers
     );
@@ -320,7 +361,8 @@ export default function Home() {
     channel.on(
       "presence",
       {
-        event: "join",
+        event:
+          "join",
       },
       updateLiveUsers
     );
@@ -328,7 +370,8 @@ export default function Home() {
     channel.on(
       "presence",
       {
-        event: "leave",
+        event:
+          "leave",
       },
       updateLiveUsers
     );
@@ -351,7 +394,7 @@ export default function Home() {
             updateLiveUsers();
           } catch (err) {
             console.error(
-              "Presence error:",
+              "Presence tracking error:",
               err
             );
           }
@@ -373,9 +416,9 @@ export default function Home() {
     };
   }, []);
 
-  /* =====================================================
-     TIMER
-  ===================================================== */
+  /* ===================================================
+     TRANSFER TIMER
+  =================================================== */
 
   useEffect(() => {
     if (!expiresAt) {
@@ -408,10 +451,13 @@ export default function Home() {
         );
 
         if (
-          seconds <= 0
+          seconds <=
+          0
         ) {
           setTransferCode("");
-          setExpiresAt(null);
+          setExpiresAt(
+            null
+          );
 
           setMessage(
             "Transfer expired. The file will be removed automatically."
@@ -433,9 +479,9 @@ export default function Home() {
       );
   }, [expiresAt]);
 
-  /* =====================================================
+  /* ===================================================
      THEME
-  ===================================================== */
+  =================================================== */
 
   const toggleTheme =
     () => {
@@ -445,7 +491,9 @@ export default function Home() {
           ? "light"
           : "dark";
 
-      setTheme(next);
+      setTheme(
+        next
+      );
 
       localStorage.setItem(
         "honeyshare-theme",
@@ -453,9 +501,9 @@ export default function Home() {
       );
     };
 
-  /* =====================================================
+  /* ===================================================
      FILE VALIDATION
-  ===================================================== */
+  =================================================== */
 
   const validateFiles =
     (incoming) => {
@@ -467,7 +515,9 @@ export default function Home() {
       setError("");
       setMessage("");
 
-      if (!selected.length) {
+      if (
+        !selected.length
+      ) {
         return;
       }
 
@@ -500,7 +550,9 @@ export default function Home() {
             MAX_FILE_SIZE
         );
 
-      if (oversized) {
+      if (
+        oversized
+      ) {
         setError(
           "One of the files is larger than the 50 MB limit."
         );
@@ -524,9 +576,9 @@ export default function Home() {
       );
     };
 
-  /* =====================================================
+  /* ===================================================
      FILE SELECT
-  ===================================================== */
+  =================================================== */
 
   const handleFileSelect =
     (event) => {
@@ -535,9 +587,9 @@ export default function Home() {
       );
     };
 
-  /* =====================================================
+  /* ===================================================
      REMOVE FILE
-  ===================================================== */
+  =================================================== */
 
   const removeFile =
     (indexToRemove) => {
@@ -566,9 +618,9 @@ export default function Home() {
       }
     };
 
-  /* =====================================================
+  /* ===================================================
      DRAG & DROP
-  ===================================================== */
+  =================================================== */
 
   const handleDragOver =
     (event) => {
@@ -601,9 +653,9 @@ export default function Home() {
       );
     };
 
-  /* =====================================================
+  /* ===================================================
      ZIP PREPARATION
-  ===================================================== */
+  =================================================== */
 
   const prepareUploadFile =
     async () => {
@@ -619,6 +671,14 @@ export default function Home() {
       );
 
       setUploadProgress(
+        0
+      );
+
+      setUploadedBytes(
+        0
+      );
+
+      setUploadTotalBytes(
         0
       );
 
@@ -679,9 +739,9 @@ export default function Home() {
       );
     };
 
-  /* =====================================================
-     ANONYMOUS TOKEN
-  ===================================================== */
+  /* ===================================================
+     ANONYMOUS ACCESS TOKEN
+  =================================================== */
 
   const ensureAnonymousAccessToken =
     async () => {
@@ -734,9 +794,9 @@ export default function Home() {
       return accessToken;
     };
 
-  /* =====================================================
+  /* ===================================================
      TUS UPLOAD
-  ===================================================== */
+  =================================================== */
 
   const uploadToTusWithProgress =
     async (
@@ -826,18 +886,26 @@ export default function Home() {
 
                 onProgress:
                   (
-                    bytesUploaded,
-                    bytesTotal
+                    bytesUploadedNow,
+                    bytesTotalNow
                   ) => {
                     const percent =
-                      bytesTotal >
+                      bytesTotalNow >
                       0
                         ? Math.round(
-                            (bytesUploaded /
-                              bytesTotal) *
+                            (bytesUploadedNow /
+                              bytesTotalNow) *
                               100
                           )
                         : 0;
+
+                    setUploadedBytes(
+                      bytesUploadedNow
+                    );
+
+                    setUploadTotalBytes(
+                      bytesTotalNow
+                    );
 
                     setUploadProgress(
                       percent
@@ -850,8 +918,20 @@ export default function Home() {
 
                 onSuccess:
                   () => {
+                    setUploadedBytes(
+                      uploadFile.size
+                    );
+
+                    setUploadTotalBytes(
+                      uploadFile.size
+                    );
+
                     setUploadProgress(
                       100
+                    );
+
+                    setUploadStage(
+                      "Upload complete"
                     );
 
                     resolve();
@@ -883,9 +963,9 @@ export default function Home() {
       );
     };
 
-  /* =====================================================
-     SIGNED UPLOAD FALLBACK
-  ===================================================== */
+  /* ===================================================
+     SIGNED URL FALLBACK
+  =================================================== */
 
   const uploadToSignedUrlFallback =
     async (
@@ -898,7 +978,26 @@ export default function Home() {
       );
 
       setUploadProgress(
-        5
+        0
+      );
+
+      setUploadedBytes(
+        0
+      );
+
+      setUploadTotalBytes(
+        uploadFile.size
+      );
+
+      /*
+        Signed upload does not expose the same granular
+        browser progress callbacks as TUS.
+        We therefore show a safe progress state rather
+        than pretending the bytes are fully uploaded.
+      */
+
+      setUploadProgress(
+        10
       );
 
       const {
@@ -926,14 +1025,26 @@ export default function Home() {
         throw uploadError;
       }
 
+      setUploadedBytes(
+        uploadFile.size
+      );
+
+      setUploadTotalBytes(
+        uploadFile.size
+      );
+
       setUploadProgress(
         100
       );
+
+      setUploadStage(
+        "Upload complete"
+      );
     };
 
-  /* =====================================================
+  /* ===================================================
      UPLOAD ROUTER
-  ===================================================== */
+  =================================================== */
 
   const uploadWithProgress =
     async (
@@ -954,7 +1065,7 @@ export default function Home() {
         tusError
       ) {
         console.warn(
-          "TUS unavailable, using signed upload fallback:",
+          "TUS upload unavailable, using signed upload fallback:",
           tusError
         );
 
@@ -966,9 +1077,9 @@ export default function Home() {
       }
     };
 
-  /* =====================================================
+  /* ===================================================
      UPLOAD
-  ===================================================== */
+  =================================================== */
 
   const uploadFiles =
     async () => {
@@ -987,6 +1098,14 @@ export default function Home() {
         0
       );
 
+      setUploadedBytes(
+        0
+      );
+
+      setUploadTotalBytes(
+        0
+      );
+
       setUploadStage(
         "Starting..."
       );
@@ -995,8 +1114,20 @@ export default function Home() {
       setMessage("");
 
       try {
+        /* Prepare */
+
         const uploadFile =
           await prepareUploadFile();
+
+        /*
+          Once the actual upload file is known,
+          make its size available to the progress UI.
+        */
+        setUploadTotalBytes(
+          uploadFile.size
+        );
+
+        /* Initialize */
 
         setUploadStage(
           "Creating secure transfer..."
@@ -1026,8 +1157,10 @@ export default function Home() {
           );
         }
 
+        /* Upload */
+
         setUploadStage(
-          "Uploading..."
+          "Uploading 0%"
         );
 
         await uploadWithProgress(
@@ -1035,6 +1168,8 @@ export default function Home() {
           initData.path,
           initData.token
         );
+
+        /* Finalizing */
 
         setUploadStage(
           "Finalizing..."
@@ -1048,6 +1183,8 @@ export default function Home() {
           }
         );
 
+        /* Success */
+
         setTransferCode(
           initData.code
         );
@@ -1058,6 +1195,14 @@ export default function Home() {
 
         setRemainingSeconds(
           TRANSFER_SECONDS
+        );
+
+        setUploadedBytes(
+          uploadFile.size
+        );
+
+        setUploadTotalBytes(
+          uploadFile.size
         );
 
         setUploadProgress(
@@ -1088,9 +1233,9 @@ export default function Home() {
       }
     };
 
-  /* =====================================================
+  /* ===================================================
      DOWNLOAD
-  ===================================================== */
+  =================================================== */
 
   const downloadFile =
     async (
@@ -1295,9 +1440,9 @@ export default function Home() {
       }
     };
 
-  /* =====================================================
+  /* ===================================================
      QR
-  ===================================================== */
+  =================================================== */
 
   const qrValue =
     origin &&
@@ -1305,9 +1450,9 @@ export default function Home() {
       ? `${origin}/share?code=${transferCode}`
       : "";
 
-  /* =====================================================
+  /* ===================================================
      RESET
-  ===================================================== */
+  =================================================== */
 
   const resetUpload =
     () => {
@@ -1327,6 +1472,14 @@ export default function Home() {
         0
       );
 
+      setUploadedBytes(
+        0
+      );
+
+      setUploadTotalBytes(
+        0
+      );
+
       setUploadStage("");
 
       setMessage("");
@@ -1340,9 +1493,9 @@ export default function Home() {
       }
     };
 
-  /* =====================================================
-     TOTAL SIZE
-  ===================================================== */
+  /* ===================================================
+     TOTAL SELECTED SIZE
+  =================================================== */
 
   const totalSelectedSize =
     files.reduce(
@@ -1355,9 +1508,9 @@ export default function Home() {
       0
     );
 
-  /* =====================================================
+  /* ===================================================
      UI
-  ===================================================== */
+  =================================================== */
 
   return (
     <main
@@ -1376,11 +1529,9 @@ export default function Home() {
 
           <div className="brand">
 
-            <img
-              src="/honeyshare.svg"
-              alt="HoneyShare"
-              className="brand-logo-image"
-            />
+            <div className="logo-mark">
+              H
+            </div>
 
             <div>
 
@@ -1423,10 +1574,12 @@ export default function Home() {
               }
               aria-label="Toggle theme"
             >
+
               {theme ===
               "dark"
                 ? "☀️"
                 : "🌙"}
+
             </button>
 
           </div>
@@ -1454,7 +1607,7 @@ export default function Home() {
 
         </section>
 
-        {/* TRANSFER GRID */}
+        {/* MAIN */}
 
         <div className="transfer-grid">
 
@@ -1566,7 +1719,7 @@ export default function Home() {
 
                 </label>
 
-                {/* SELECTED FILES */}
+                {/* FILE LIST */}
 
                 {files.length >
                   0 && (
@@ -1659,10 +1812,17 @@ export default function Home() {
 
                     <div className="progress-detail">
 
-                      {files.length >
-                      1
-                        ? "Creating and uploading ZIP"
-                        : "Uploading securely"}
+                      {uploadStage ===
+                      "Preparing ZIP..."
+                        ? `Preparing ${formatBytes(
+                            totalSelectedSize
+                          )}`
+                        : `${formatBytes(
+                            uploadedBytes
+                          )} / ${formatBytes(
+                            uploadTotalBytes ||
+                              totalSelectedSize
+                          )}`}
 
                     </div>
 
@@ -1753,7 +1913,9 @@ export default function Home() {
                     <div className="transfer-code-box">
 
                       <span className="transfer-code">
-                        {transferCode}
+                        {
+                          transferCode
+                        }
                       </span>
 
                     </div>
@@ -1777,7 +1939,9 @@ export default function Home() {
                         resetUpload
                       }
                     >
+
                       Send another file
+
                     </button>
 
                   </div>
@@ -1891,6 +2055,8 @@ export default function Home() {
 
             </div>
 
+            {/* DOWNLOAD PROGRESS */}
+
             {downloading && (
 
               <div className="download-progress-panel">
@@ -1902,7 +2068,10 @@ export default function Home() {
                   </span>
 
                   <strong>
-                    {downloadProgress}%
+                    {
+                      downloadProgress
+                    }
+                    %
                   </strong>
 
                 </div>
