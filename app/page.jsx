@@ -44,6 +44,9 @@ const VISITOR_STORAGE_KEY =
 const PRESENCE_CHANNEL =
   "honeyshare-live-users";
 
+const STORAGE_BUCKET =
+  "temporary-files";
+
 const supabase =
   createClient(
     SUPABASE_URL,
@@ -396,6 +399,7 @@ export default function Home() {
         "honeyshare-theme"
       );
 
+
     if (
       savedTheme ===
         "dark" ||
@@ -413,11 +417,12 @@ export default function Home() {
 
 
     /* ---------------------------------------------
-       VISITOR ANALYTICS
+       ANALYTICS
     --------------------------------------------- */
 
     const recordVisitor =
       async () => {
+
         try {
 
           const {
@@ -432,6 +437,7 @@ export default function Home() {
               }
             );
 
+
           if (
             visitorError
           ) {
@@ -444,11 +450,14 @@ export default function Home() {
         } catch (
           err
         ) {
+
           console.error(
             "Visitor tracking error:",
             err
           );
+
         }
+
       };
 
 
@@ -483,14 +492,12 @@ export default function Home() {
         const state =
           channel.presenceState();
 
-        const count =
+        setLiveUsers(
           Object.keys(
             state || {}
-          ).length;
-
-        setLiveUsers(
-          count
+          ).length
         );
+
       };
 
 
@@ -551,12 +558,16 @@ export default function Home() {
           } catch (
             err
           ) {
+
             console.error(
               "Presence tracking error:",
               err
             );
+
           }
+
         }
+
       }
     );
 
@@ -573,6 +584,7 @@ export default function Home() {
 
         presenceChannelRef.current =
           null;
+
       }
 
     };
@@ -593,6 +605,7 @@ export default function Home() {
       );
 
       return;
+
     }
 
 
@@ -634,9 +647,11 @@ export default function Home() {
             null
           );
 
+
           setMessage(
             "Transfer expired. The file will be removed automatically."
           );
+
         }
 
       };
@@ -725,6 +740,7 @@ export default function Home() {
         );
 
         return;
+
       }
 
 
@@ -759,6 +775,7 @@ export default function Home() {
         );
 
         return;
+
       }
 
 
@@ -772,6 +789,7 @@ export default function Home() {
         );
 
         return;
+
       }
 
 
@@ -799,7 +817,7 @@ export default function Home() {
 
 
   /* ===================================================
-     REMOVE SINGLE FILE
+     REMOVE FILE
   =================================================== */
 
   const removeFile =
@@ -839,7 +857,7 @@ export default function Home() {
 
 
   /* ===================================================
-     DRAG & DROP
+     DRAG
   =================================================== */
 
   const handleDragOver =
@@ -889,7 +907,7 @@ export default function Home() {
 
 
   /* ===================================================
-     ZIP PREPARATION
+     ZIP
   =================================================== */
 
   const prepareUploadFile =
@@ -900,11 +918,19 @@ export default function Home() {
         1
       ) {
 
+        const singleFile =
+          files[0];
+
         setUploadTotalBytes(
-          files[0].size
+          singleFile.size
         );
 
-        return files[0];
+        setUploadedBytes(
+          0
+        );
+
+        return singleFile;
+
       }
 
 
@@ -912,13 +938,16 @@ export default function Home() {
         "Preparing ZIP..."
       );
 
+
       setUploadProgress(
         0
       );
 
+
       setUploadedBytes(
         0
       );
+
 
       setUploadTotalBytes(
         totalSelectedSize
@@ -965,6 +994,12 @@ export default function Home() {
                 metadata.percent
               );
 
+            /*
+              During ZIP preparation, the percentage
+              belongs to ZIP generation, not network
+              upload. We display the stage clearly.
+            */
+
             setUploadProgress(
               percent
             );
@@ -998,7 +1033,7 @@ export default function Home() {
 
 
   /* ===================================================
-     ANONYMOUS ACCESS TOKEN
+     AUTH TOKEN
   =================================================== */
 
   const ensureAnonymousAccessToken =
@@ -1084,6 +1119,11 @@ export default function Home() {
           reject
         ) => {
 
+          /*
+            IMPORTANT:
+            Use the project .supabase.co endpoint.
+          */
+
           const hostname =
             new URL(
               SUPABASE_URL
@@ -1097,7 +1137,7 @@ export default function Home() {
 
 
           const endpoint =
-            `https://${projectRef}.storage.supabase.co/storage/v1/upload/resumable`;
+            `https://${projectRef}.supabase.co/storage/v1/upload/resumable`;
 
 
           const upload =
@@ -1112,11 +1152,11 @@ export default function Home() {
                   authorization:
                     `Bearer ${accessToken}`,
 
+                  apikey:
+                    SUPABASE_KEY,
+
                   "x-signature":
                     token,
-
-                  "x-upsert":
-                    "false",
 
                 },
 
@@ -1147,7 +1187,7 @@ export default function Home() {
                 metadata: {
 
                   bucketName:
-                    "temporary-files",
+                    STORAGE_BUCKET,
 
                   objectName:
                     uploadFile.name,
@@ -1171,6 +1211,7 @@ export default function Home() {
                       "TUS upload error:",
                       uploadError
                     );
+
 
                     reject(
                       uploadError
@@ -1285,18 +1326,15 @@ export default function Home() {
 
 
   /* ===================================================
-     SIGNED URL FALLBACK
-
-     IMPORTANT:
-     This uses XMLHttpRequest so that the browser
-     provides real upload progress events.
+     SIGNED UPLOAD FALLBACK WITH REAL XHR PROGRESS
   =================================================== */
 
   const uploadToSignedUrlFallback =
     async (
       uploadFile,
       path,
-      token
+      token,
+      accessToken
     ) => {
 
       return new Promise(
@@ -1351,10 +1389,42 @@ export default function Home() {
             );
 
 
-            xhr.setRequestHeader(
-              "x-upsert",
-              "false"
-            );
+            /*
+              THIS fixes the error:
+              "headers must have required property authorization"
+            */
+
+            if (
+              accessToken
+            ) {
+
+              xhr.setRequestHeader(
+                "Authorization",
+                `Bearer ${accessToken}`
+              );
+
+            } else if (
+              SUPABASE_KEY
+            ) {
+
+              xhr.setRequestHeader(
+                "Authorization",
+                `Bearer ${SUPABASE_KEY}`
+              );
+
+            }
+
+
+            if (
+              SUPABASE_KEY
+            ) {
+
+              xhr.setRequestHeader(
+                "apikey",
+                SUPABASE_KEY
+              );
+
+            }
 
 
             const formData =
@@ -1368,9 +1438,10 @@ export default function Home() {
 
 
             /*
-              Supabase uploadToSignedUrl uses an empty
-              FormData field name for the file body.
+              Empty field name matches the upload
+              format used by Supabase signed upload.
             */
+
             formData.append(
               "",
               uploadFile
@@ -1475,6 +1546,7 @@ export default function Home() {
                   resolve();
 
                   return;
+
                 }
 
 
@@ -1518,6 +1590,7 @@ export default function Home() {
               formData
             );
 
+
           } catch (
             err
           ) {
@@ -1545,6 +1618,15 @@ export default function Home() {
       token
     ) => {
 
+      let tusError =
+        null;
+
+
+      /*
+        FIRST:
+        Try proper TUS upload.
+      */
+
       try {
 
         const accessToken =
@@ -1561,22 +1643,60 @@ export default function Home() {
         return;
 
       } catch (
-        tusError
+        err
       ) {
 
+        tusError =
+          err;
+
+
         console.warn(
-          "TUS failed. Falling back to XHR signed upload:",
-          tusError
+          "TUS upload failed. Using signed XHR fallback.",
+          err
         );
 
       }
 
 
-      await uploadToSignedUrlFallback(
-        uploadFile,
-        path,
-        token
-      );
+      /*
+        SECOND:
+        Use signed upload with real browser
+        upload progress.
+      */
+
+      try {
+
+        const accessToken =
+          await ensureAnonymousAccessToken();
+
+
+        await uploadToSignedUrlFallback(
+          uploadFile,
+          path,
+          token,
+          accessToken
+        );
+
+
+        return;
+
+      } catch (
+        fallbackError
+      ) {
+
+        console.error(
+          "Signed upload fallback failed:",
+          fallbackError
+        );
+
+
+        throw new Error(
+          fallbackError?.message ||
+            tusError?.message ||
+            "Unable to upload file."
+        );
+
+      }
 
     };
 
@@ -1627,12 +1747,22 @@ export default function Home() {
 
       try {
 
-        /* -------------------------------------------
-           PREPARE
-        ------------------------------------------- */
+        /*
+          Prepare actual upload file.
+        */
 
         const uploadFile =
           await prepareUploadFile();
+
+
+        /*
+          Reset network upload progress
+          after ZIP preparation.
+        */
+
+        setUploadedBytes(
+          0
+        );
 
 
         setUploadTotalBytes(
@@ -1640,19 +1770,19 @@ export default function Home() {
         );
 
 
-        setUploadedBytes(
+        setUploadProgress(
           0
         );
 
-
-        /* -------------------------------------------
-           CREATE TRANSFER
-        ------------------------------------------- */
 
         setUploadStage(
           "Creating secure transfer..."
         );
 
+
+        /*
+          Create transfer on backend.
+        */
 
         const initData =
           await callTransferFunction(
@@ -1672,7 +1802,7 @@ export default function Home() {
 
 
         if (
-          !initData.token
+          !initData?.token
         ) {
 
           throw new Error(
@@ -1682,14 +1812,9 @@ export default function Home() {
         }
 
 
-        /* -------------------------------------------
-           UPLOAD
-        ------------------------------------------- */
-
-        setUploadProgress(
-          0
-        );
-
+        /*
+          Actual network upload.
+        */
 
         setUploadStage(
           "Uploading 0%"
@@ -1703,9 +1828,9 @@ export default function Home() {
         );
 
 
-        /* -------------------------------------------
-           FINALIZE
-        ------------------------------------------- */
+        /*
+          Finalize transfer.
+        */
 
         setUploadStage(
           "Finalizing..."
@@ -1721,9 +1846,9 @@ export default function Home() {
         );
 
 
-        /* -------------------------------------------
-           SUCCESS
-        ------------------------------------------- */
+        /*
+          Success.
+        */
 
         setTransferCode(
           initData.code
@@ -2092,26 +2217,21 @@ export default function Home() {
         0
       );
 
-
       setUploadProgress(
         0
       );
-
 
       setUploadedBytes(
         0
       );
 
-
       setUploadTotalBytes(
         0
       );
 
-
       setUploadStage(
         ""
       );
-
 
       setMessage("");
       setError("");
@@ -2146,7 +2266,7 @@ export default function Home() {
 
 
   /* ===================================================
-     UI
+     RENDER
   =================================================== */
 
   return (
@@ -2157,6 +2277,7 @@ export default function Home() {
       <div className="background-glow glow-one" />
 
       <div className="background-glow glow-two" />
+
 
       <section className="container">
 
@@ -2443,9 +2564,7 @@ export default function Home() {
 
                             }}
                           >
-
                             ×
-
                           </button>
 
                         </div>
@@ -2469,6 +2588,7 @@ export default function Home() {
                       <span>
                         {uploadStage}
                       </span>
+
 
                       <strong>
                         {uploadProgress}%
@@ -2543,9 +2663,7 @@ export default function Home() {
 
             ) : (
 
-              /* =====================================
-                 UPLOADED STATE
-              ===================================== */
+              /* UPLOADED STATE */
 
               <div className="success-area">
 
@@ -2767,11 +2885,9 @@ export default function Home() {
                     Downloading
                   </span>
 
+
                   <strong>
-                    {
-                      downloadProgress
-                    }
-                    %
+                    {downloadProgress}%
                   </strong>
 
                 </div>
@@ -2909,6 +3025,7 @@ export default function Home() {
           <span>
             HoneyShare
           </span>
+
 
           <span>
             •
