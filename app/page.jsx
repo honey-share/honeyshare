@@ -7,9 +7,7 @@ import {
 } from "react";
 
 import { createClient } from "@supabase/supabase-js";
-
 import { QRCodeCanvas } from "qrcode.react";
-
 import JSZip from "jszip";
 
 /* =====================================================
@@ -32,11 +30,9 @@ const STORAGE_BUCKET =
 const MAX_FILE_SIZE =
   50 * 1024 * 1024;
 
-const MAX_FILES =
-  10;
+const MAX_FILES = 10;
 
-const TRANSFER_SECONDS =
-  5 * 60;
+const TRANSFER_SECONDS = 5 * 60;
 
 const VISITOR_STORAGE_KEY =
   "honeyshare-visitor-id";
@@ -44,36 +40,26 @@ const VISITOR_STORAGE_KEY =
 const PRESENCE_CHANNEL =
   "honeyshare-live-users";
 
-
 const supabase =
   createClient(
     SUPABASE_URL,
     SUPABASE_KEY
   );
 
-
 /* =====================================================
    HELPERS
 ===================================================== */
 
-function formatBytes(
-  bytes
-) {
+function formatBytes(bytes) {
   if (!bytes || bytes <= 0) {
     return "0 B";
   }
 
-  if (
-    bytes <
-    1024
-  ) {
+  if (bytes < 1024) {
     return `${bytes} B`;
   }
 
-  if (
-    bytes <
-    1024 * 1024
-  ) {
+  if (bytes < 1024 * 1024) {
     return `${(
       bytes / 1024
     ).toFixed(1)} KB`;
@@ -85,10 +71,7 @@ function formatBytes(
   ).toFixed(2)} MB`;
 }
 
-
-function formatTime(
-  seconds
-) {
+function formatTime(seconds) {
   const minutes =
     Math.floor(
       seconds / 60
@@ -99,42 +82,35 @@ function formatTime(
 
   return `${String(
     minutes
-  ).padStart(
-    2,
-    "0"
-  )}:${String(
+  ).padStart(2, "0")}:${String(
     remaining
-  ).padStart(
-    2,
-    "0"
-  )}`;
+  ).padStart(2, "0")}`;
 }
-
 
 function getVisitorId() {
   try {
-    let id =
+    let visitorId =
       localStorage.getItem(
         VISITOR_STORAGE_KEY
       );
 
-    if (!id) {
-      id =
+    if (!visitorId) {
+      visitorId =
         typeof crypto !==
           "undefined" &&
         crypto.randomUUID
           ? crypto.randomUUID()
           : `visitor-${Date.now()}-${Math.random()
               .toString(36)
-              .slice(2)}`;
+              .slice(2, 10)}`;
 
       localStorage.setItem(
         VISITOR_STORAGE_KEY,
-        id
+        visitorId
       );
     }
 
-    return id;
+    return visitorId;
   } catch {
     return `visitor-${Date.now()}-${Math.random()
       .toString(36)
@@ -142,9 +118,8 @@ function getVisitorId() {
   }
 }
 
-
 /* =====================================================
-   TRANSFER FUNCTION
+   EDGE FUNCTION
 ===================================================== */
 
 async function callTransferFunction(
@@ -181,13 +156,11 @@ async function callTransferFunction(
   return data;
 }
 
-
 /* =====================================================
    MAIN
 ===================================================== */
 
 export default function Home() {
-
   /* ===================================================
      THEME
   =================================================== */
@@ -195,10 +168,7 @@ export default function Home() {
   const [
     theme,
     setTheme,
-  ] = useState(
-    "dark"
-  );
-
+  ] = useState("dark");
 
   /* ===================================================
      FILES
@@ -212,10 +182,7 @@ export default function Home() {
   const [
     dragActive,
     setDragActive,
-  ] = useState(
-    false
-  );
-
+  ] = useState(false);
 
   /* ===================================================
      UPLOAD
@@ -224,38 +191,27 @@ export default function Home() {
   const [
     uploading,
     setUploading,
-  ] = useState(
-    false
-  );
+  ] = useState(false);
 
   const [
     uploadProgress,
     setUploadProgress,
-  ] = useState(
-    0
-  );
+  ] = useState(0);
 
   const [
     uploadStage,
     setUploadStage,
-  ] = useState(
-    ""
-  );
+  ] = useState("");
 
   const [
     uploadedBytes,
     setUploadedBytes,
-  ] = useState(
-    0
-  );
+  ] = useState(0);
 
   const [
     uploadTotalBytes,
     setUploadTotalBytes,
-  ] = useState(
-    0
-  );
-
+  ] = useState(0);
 
   /* ===================================================
      TRANSFER
@@ -264,24 +220,17 @@ export default function Home() {
   const [
     transferCode,
     setTransferCode,
-  ] = useState(
-    ""
-  );
+  ] = useState("");
 
   const [
     expiresAt,
     setExpiresAt,
-  ] = useState(
-    null
-  );
+  ] = useState(null);
 
   const [
     remainingSeconds,
     setRemainingSeconds,
-  ] = useState(
-    0
-  );
-
+  ] = useState(0);
 
   /* ===================================================
      DOWNLOAD
@@ -290,38 +239,27 @@ export default function Home() {
   const [
     receiveCode,
     setReceiveCode,
-  ] = useState(
-    ""
-  );
+  ] = useState("");
 
   const [
     downloading,
     setDownloading,
-  ] = useState(
-    false
-  );
+  ] = useState(false);
 
   const [
     downloadProgress,
     setDownloadProgress,
-  ] = useState(
-    0
-  );
+  ] = useState(0);
 
   const [
     downloadedBytes,
     setDownloadedBytes,
-  ] = useState(
-    0
-  );
+  ] = useState(0);
 
   const [
     downloadTotal,
     setDownloadTotal,
-  ] = useState(
-    0
-  );
-
+  ] = useState(0);
 
   /* ===================================================
      UI
@@ -330,24 +268,17 @@ export default function Home() {
   const [
     message,
     setMessage,
-  ] = useState(
-    ""
-  );
+  ] = useState("");
 
   const [
     error,
     setError,
-  ] = useState(
-    ""
-  );
+  ] = useState("");
 
   const [
     origin,
     setOrigin,
-  ] = useState(
-    ""
-  );
-
+  ] = useState("");
 
   /* ===================================================
      LIVE USERS
@@ -356,10 +287,7 @@ export default function Home() {
   const [
     liveUsers,
     setLiveUsers,
-  ] = useState(
-    0
-  );
-
+  ] = useState(0);
 
   /* ===================================================
      REFS
@@ -371,81 +299,54 @@ export default function Home() {
   const presenceChannelRef =
     useRef(null);
 
-
   /* ===================================================
      INITIALIZATION
   =================================================== */
 
   useEffect(() => {
-
     setOrigin(
       window.location.origin
     );
-
 
     const savedTheme =
       localStorage.getItem(
         "honeyshare-theme"
       );
 
-
     if (
-      savedTheme ===
-        "dark" ||
-      savedTheme ===
-        "light"
+      savedTheme === "dark" ||
+      savedTheme === "light"
     ) {
       setTheme(
         savedTheme
       );
     }
 
-
-    /* ---------------------------------------------
-       VISITOR
-    --------------------------------------------- */
+    /* -----------------------------------------------
+       VISITOR ANALYTICS
+    ------------------------------------------------ */
 
     const visitorId =
       getVisitorId();
 
-
-    /* ---------------------------------------------
-       ANALYTICS
-    --------------------------------------------- */
-
-    const recordVisitor =
-      async () => {
-
-        try {
-
-          await supabase.rpc(
-            "record_visitor",
-            {
-              p_visitor_id:
-                visitorId,
-            }
-          );
-
-        } catch (
-          err
-        ) {
-
-          console.error(
-            "Visitor tracking error:",
-            err
-          );
-
+    supabase
+      .rpc(
+        "record_visitor",
+        {
+          p_visitor_id:
+            visitorId,
         }
+      )
+      .catch((err) => {
+        console.error(
+          "Visitor tracking error:",
+          err
+        );
+      });
 
-      };
-
-
-    recordVisitor();
-
-
-    /* ---------------------------------------------
-       LIVE PRESENCE
-    --------------------------------------------- */
+    /* -----------------------------------------------
+       LIVE USERS
+    ------------------------------------------------ */
 
     const channel =
       supabase.channel(
@@ -460,14 +361,11 @@ export default function Home() {
         }
       );
 
-
     presenceChannelRef.current =
       channel;
 
-
     const updateLiveUsers =
       () => {
-
         const state =
           channel.presenceState();
 
@@ -476,9 +374,7 @@ export default function Home() {
             state || {}
           ).length
         );
-
       };
-
 
     channel.on(
       "presence",
@@ -489,7 +385,6 @@ export default function Home() {
       updateLiveUsers
     );
 
-
     channel.on(
       "presence",
       {
@@ -498,7 +393,6 @@ export default function Home() {
       },
       updateLiveUsers
     );
-
 
     channel.on(
       "presence",
@@ -509,88 +403,60 @@ export default function Home() {
       updateLiveUsers
     );
 
-
     channel.subscribe(
       async (
         status
       ) => {
-
         if (
           status ===
           "SUBSCRIBED"
         ) {
-
           try {
+            await channel.track({
+              visitor_id:
+                visitorId,
 
-            await channel.track(
-              {
-                visitor_id:
-                  visitorId,
-
-                online_at:
-                  new Date().toISOString(),
-              }
-            );
+              online_at:
+                new Date().toISOString(),
+            });
 
             updateLiveUsers();
-
-          } catch (
-            err
-          ) {
-
+          } catch (err) {
             console.error(
               "Presence error:",
               err
             );
-
           }
-
         }
-
       }
     );
 
-
     return () => {
-
       if (
         presenceChannelRef.current
       ) {
-
         supabase.removeChannel(
           presenceChannelRef.current
         );
 
         presenceChannelRef.current =
           null;
-
       }
-
     };
-
   }, []);
-
 
   /* ===================================================
      EXPIRY TIMER
   =================================================== */
 
   useEffect(() => {
-
     if (!expiresAt) {
-
-      setRemainingSeconds(
-        0
-      );
-
+      setRemainingSeconds(0);
       return;
-
     }
-
 
     const updateTimer =
       () => {
-
         const remaining =
           Math.max(
             0,
@@ -600,43 +466,29 @@ export default function Home() {
               Date.now()
           );
 
-
         const seconds =
           Math.ceil(
             remaining /
               1000
           );
 
-
         setRemainingSeconds(
           seconds
         );
 
-
         if (
-          seconds <=
-          0
+          seconds <= 0
         ) {
-
-          setTransferCode(
-            ""
-          );
-
-          setExpiresAt(
-            null
-          );
+          setTransferCode("");
+          setExpiresAt(null);
 
           setMessage(
             "Transfer expired. The file will be removed automatically."
           );
-
         }
-
       };
 
-
     updateTimer();
-
 
     const interval =
       setInterval(
@@ -644,16 +496,11 @@ export default function Home() {
         1000
       );
 
-
     return () =>
       clearInterval(
         interval
       );
-
-  }, [
-    expiresAt,
-  ]);
-
+  }, [expiresAt]);
 
   /* ===================================================
      THEME
@@ -661,45 +508,33 @@ export default function Home() {
 
   const toggleTheme =
     () => {
-
       const next =
         theme ===
         "dark"
           ? "light"
           : "dark";
 
-
-      setTheme(
-        next
-      );
-
+      setTheme(next);
 
       localStorage.setItem(
         "honeyshare-theme",
         next
       );
-
     };
 
-
   /* ===================================================
-     VALIDATE FILES
+     FILE VALIDATION
   =================================================== */
 
   const validateFiles =
-    (
-      incoming
-    ) => {
-
+    (incoming) => {
       const selected =
         Array.from(
           incoming || []
         );
 
-
       setError("");
       setMessage("");
-
 
       if (
         !selected.length
@@ -707,20 +542,16 @@ export default function Home() {
         return;
       }
 
-
       if (
         selected.length >
         MAX_FILES
       ) {
-
         setError(
           `Maximum ${MAX_FILES} files can be selected.`
         );
 
         return;
-
       }
-
 
       const totalSize =
         selected.reduce(
@@ -733,76 +564,56 @@ export default function Home() {
           0
         );
 
-
-      const oversized =
+      const hasOversized =
         selected.some(
-          (
-            file
-          ) =>
+          (file) =>
             file.size >
             MAX_FILE_SIZE
         );
 
-
       if (
-        oversized
+        hasOversized
       ) {
-
         setError(
           "One of the files is larger than the 50 MB limit."
         );
 
         return;
-
       }
-
 
       if (
         totalSize >
         MAX_FILE_SIZE
       ) {
-
         setError(
           "Total selected file size cannot exceed 50 MB."
         );
 
         return;
-
       }
-
 
       setFiles(
         selected
       );
-
     };
-
 
   /* ===================================================
      FILE SELECT
   =================================================== */
 
   const handleFileSelect =
-    (
-      event
-    ) => {
-
+    (event) => {
       validateFiles(
         event.target.files
       );
-
     };
-
 
   /* ===================================================
      REMOVE FILE
   =================================================== */
 
   const removeFile =
-    (
-      indexToRemove
-    ) => {
-
+    (indexToRemove) => {
       setFiles(
         (
           current
@@ -817,73 +628,51 @@ export default function Home() {
           )
       );
 
-
       setError("");
       setMessage("");
-
 
       if (
         fileInputRef.current
       ) {
-
         fileInputRef.current.value =
           "";
-
       }
-
     };
-
 
   /* ===================================================
      DRAG & DROP
   =================================================== */
 
   const handleDragOver =
-    (
-      event
-    ) => {
-
+    (event) => {
       event.preventDefault();
 
       setDragActive(
         true
       );
-
     };
-
 
   const handleDragLeave =
-    (
-      event
-    ) => {
-
+    (event) => {
       event.preventDefault();
 
       setDragActive(
         false
       );
-
     };
 
-
   const handleDrop =
-    (
-      event
-    ) => {
-
+    (event) => {
       event.preventDefault();
 
       setDragActive(
         false
       );
-
 
       validateFiles(
         event.dataTransfer.files
       );
-
     };
-
 
   /* ===================================================
      CREATE ZIP
@@ -891,20 +680,19 @@ export default function Home() {
 
   const prepareUploadFile =
     async () => {
-
       if (
         files.length ===
         1
       ) {
+        const file =
+          files[0];
 
         setUploadTotalBytes(
-          files[0].size
+          file.size
         );
 
-        return files[0];
-
+        return file;
       }
-
 
       setUploadStage(
         "Preparing ZIP..."
@@ -919,27 +707,30 @@ export default function Home() {
       );
 
       setUploadTotalBytes(
-        totalSelectedSize
+        files.reduce(
+          (
+            total,
+            item
+          ) =>
+            total +
+            item.size,
+          0
+        )
       );
-
 
       const zip =
         new JSZip();
-
 
       files.forEach(
         (
           file
         ) => {
-
           zip.file(
             file.name,
             file
           );
-
         }
       );
-
 
       const blob =
         await zip.generateAsync(
@@ -953,32 +744,25 @@ export default function Home() {
             streamFiles:
               true,
           },
-
           (
             metadata
           ) => {
-
             setUploadProgress(
               Math.round(
                 metadata.percent
               )
             );
-
           }
         );
-
 
       if (
         blob.size >
         MAX_FILE_SIZE
       ) {
-
         throw new Error(
           "Generated ZIP is larger than the 50 MB limit."
         );
-
       }
-
 
       return new File(
         [blob],
@@ -988,17 +772,18 @@ export default function Home() {
             "application/zip",
         }
       );
-
     };
 
-
   /* ===================================================
-     REAL SIGNED UPLOAD WITH XHR PROGRESS
-     
-     This keeps the same Supabase signed-upload
-     mechanism but uses XMLHttpRequest instead of
-     uploadToSignedUrl() so browser upload progress
-     is available.
+     SIGNED UPLOAD WITH REAL PROGRESS
+
+     IMPORTANT:
+     - Same signed token/path flow
+     - NO anonymous login
+     - NO Authorization header
+     - NO apikey header
+     - PUT request, matching Supabase signed-upload
+     - Browser XHR progress events
   =================================================== */
 
   const uploadToSignedUrlWithProgress =
@@ -1007,19 +792,15 @@ export default function Home() {
       path,
       token
     ) => {
-
       return new Promise(
         (
           resolve,
           reject
         ) => {
-
           try {
-
             if (
               !SUPABASE_URL
             ) {
-
               reject(
                 new Error(
                   "Missing Supabase URL."
@@ -1027,39 +808,44 @@ export default function Home() {
               );
 
               return;
-
             }
 
-
             if (
-              !SUPABASE_KEY
+              !token
             ) {
-
               reject(
                 new Error(
-                  "Missing Supabase public/anon key."
+                  "Missing signed upload token."
                 )
               );
 
               return;
-
             }
 
+            /*
+              Supabase's Storage SDK builds the signed
+              upload endpoint under:
 
-            const cleanBase =
+              /storage/v1/object/upload/sign/
+
+              and includes the bucket in the path.
+            */
+
+            const baseUrl =
               SUPABASE_URL.replace(
                 /\/$/,
                 ""
               );
 
-
-            const cleanPath =
-              String(
-                path
-              )
-                .split(
-                  "/"
+            const finalPath =
+              [
+                STORAGE_BUCKET,
+                ...String(
+                  path
                 )
+                  .split("/")
+                  .filter(Boolean),
+              ]
                 .map(
                   (
                     part
@@ -1068,276 +854,205 @@ export default function Home() {
                       part
                     )
                 )
-                .join(
-                  "/"
-                );
+                .join("/");
 
-
-            /*
-              Same signed upload endpoint used by
-              Supabase Storage.
-            */
-
-            const signedUploadUrl =
-              `${cleanBase}/storage/v1/object/upload/sign/${cleanPath}?token=${encodeURIComponent(
+            const signedUrl =
+              `${baseUrl}/storage/v1/object/upload/sign/${finalPath}?token=${encodeURIComponent(
                 token
               )}`;
-
 
             const xhr =
               new XMLHttpRequest();
 
-
             xhr.open(
-              "POST",
-              signedUploadUrl,
+              "PUT",
+              signedUrl,
               true
             );
 
-
             /*
-              Supabase client normally supplies these
-              default headers. We keep them here too.
+              DO NOT add:
+              Authorization
+              apikey
+
+              Signed upload token is the authorization
+              mechanism for this request.
             */
 
             xhr.setRequestHeader(
-              "Authorization",
-              `Bearer ${SUPABASE_KEY}`
+              "x-upsert",
+              "false"
             );
-
-
-            xhr.setRequestHeader(
-              "apikey",
-              SUPABASE_KEY
-            );
-
 
             /*
-              Supabase signed upload expects FormData.
+              Supabase signed File upload uses FormData
+              with cacheControl and the file body.
             */
 
             const formData =
               new FormData();
-
 
             formData.append(
               "cacheControl",
               "3600"
             );
 
-
             formData.append(
               "",
               uploadFile
             );
 
-
-            /*
-              Reset progress.
-            */
-
             setUploadedBytes(
               0
             );
-
 
             setUploadTotalBytes(
               uploadFile.size
             );
 
-
             setUploadProgress(
               0
             );
-
 
             setUploadStage(
               "Uploading 0%"
             );
 
-
             /*
-              REAL browser upload progress.
+              REAL UPLOAD PROGRESS
             */
 
             xhr.upload.onprogress =
               (
                 event
               ) => {
-
                 if (
                   !event.lengthComputable
                 ) {
-
                   return;
-
                 }
 
-
-                const currentBytes =
+                const loaded =
                   event.loaded;
 
-
-                const totalBytes =
+                const total =
                   event.total ||
                   uploadFile.size;
 
-
                 const percent =
-                  totalBytes >
-                  0
+                  total > 0
                     ? Math.min(
                         100,
                         Math.round(
-                          (currentBytes /
-                            totalBytes) *
+                          (loaded /
+                            total) *
                             100
                         )
                       )
                     : 0;
 
-
                 setUploadedBytes(
-                  currentBytes
+                  loaded
                 );
-
 
                 setUploadTotalBytes(
-                  totalBytes
+                  total
                 );
-
 
                 setUploadProgress(
                   percent
                 );
 
-
                 setUploadStage(
                   `Uploading ${percent}%`
                 );
-
               };
-
 
             xhr.onload =
               () => {
-
                 if (
                   xhr.status >=
                     200 &&
                   xhr.status <
                     300
                 ) {
-
                   setUploadedBytes(
                     uploadFile.size
                   );
-
 
                   setUploadTotalBytes(
                     uploadFile.size
                   );
 
-
                   setUploadProgress(
                     100
                   );
-
 
                   setUploadStage(
                     "Upload complete"
                   );
 
-
                   resolve();
 
                   return;
-
                 }
 
-
-                let responseText =
-                  xhr.responseText;
-
+                let details =
+                  xhr.responseText ||
+                  "Unknown upload error.";
 
                 try {
-
                   const parsed =
                     JSON.parse(
                       xhr.responseText
                     );
 
-
                   if (
-                    parsed
-                      ?.message
+                    parsed?.message
                   ) {
-
-                    responseText =
+                    details =
                       parsed.message;
-
                   }
-
                 } catch {
-                  /* Keep raw response */
+                  /* Keep original response */
                 }
-
 
                 reject(
                   new Error(
-                    `Upload failed (${xhr.status}): ${
-                      responseText ||
-                      "Unknown Supabase Storage error."
-                    }`
+                    `Upload failed (${xhr.status}): ${details}`
                   )
                 );
-
               };
-
 
             xhr.onerror =
               () => {
-
                 reject(
                   new Error(
                     "Network error while uploading the file."
                   )
                 );
-
               };
-
 
             xhr.onabort =
               () => {
-
                 reject(
                   new Error(
                     "Upload was cancelled."
                   )
                 );
-
               };
-
 
             xhr.send(
               formData
             );
-
           } catch (
             err
           ) {
-
-            reject(
-              err
-            );
-
+            reject(err);
           }
-
         }
       );
-
     };
-
 
   /* ===================================================
      UPLOAD
@@ -1345,84 +1060,69 @@ export default function Home() {
 
   const uploadFiles =
     async () => {
-
       if (
         !files.length ||
         uploading
       ) {
-
         return;
-
       }
-
 
       setUploading(
         true
       );
 
-
       setUploadProgress(
         0
       );
-
 
       setUploadedBytes(
         0
       );
 
-
       setUploadTotalBytes(
         0
       );
-
 
       setUploadStage(
         "Starting..."
       );
 
-
       setError("");
       setMessage("");
 
-
       try {
-
         /*
-          Prepare actual upload file.
+          Step 1:
+          Prepare single file or ZIP.
         */
 
         const uploadFile =
           await prepareUploadFile();
 
-
         /*
-          Network upload progress starts
-          from zero after ZIP preparation.
+          Reset network progress after ZIP creation.
         */
 
         setUploadedBytes(
           0
         );
 
-
         setUploadTotalBytes(
           uploadFile.size
         );
-
 
         setUploadProgress(
           0
         );
 
+        /*
+          Step 2:
+          Same backend initialization.
+        */
 
         setUploadStage(
           "Creating secure transfer..."
         );
-
-
-        /*
-          Same backend initialization as before.
-        */
 
         const initData =
           await callTransferFunction(
@@ -1440,31 +1140,28 @@ export default function Home() {
             }
           );
 
-
         if (
           !initData?.token
         ) {
-
           throw new Error(
             "Server did not return a signed upload token."
           );
-
         }
-
 
         if (
           !initData?.path
         ) {
-
           throw new Error(
             "Server did not return an upload path."
           );
-
         }
 
-
         /*
-          Actual upload with real XHR progress.
+          Step 3:
+          ACTUAL upload with real XHR progress.
+
+          No anonymous auth.
+          No manual Authorization.
         */
 
         await uploadToSignedUrlWithProgress(
@@ -1473,15 +1170,14 @@ export default function Home() {
           initData.token
         );
 
-
         /*
+          Step 4:
           Activate transfer.
         */
 
         setUploadStage(
           "Finalizing..."
         );
-
 
         await callTransferFunction(
           "activate-upload",
@@ -1491,8 +1187,8 @@ export default function Home() {
           }
         );
 
-
         /*
+          Step 5:
           Success.
         */
 
@@ -1500,81 +1196,63 @@ export default function Home() {
           initData.code
         );
 
-
         setExpiresAt(
           initData.expiresAt
         );
-
 
         setRemainingSeconds(
           TRANSFER_SECONDS
         );
 
-
         setUploadedBytes(
           uploadFile.size
         );
-
 
         setUploadTotalBytes(
           uploadFile.size
         );
 
-
         setUploadProgress(
           100
         );
-
 
         setUploadStage(
           "Uploaded"
         );
 
-
         setMessage(
           "File uploaded successfully."
         );
-
       } catch (
         err
       ) {
-
         console.error(
           "Upload error:",
           err
         );
-
 
         setError(
           err?.message ||
             "Upload failed. Please try again."
         );
 
-
         setTransferCode(
           ""
         );
-
 
         setExpiresAt(
           null
         );
 
-
         setRemainingSeconds(
           0
         );
-
       } finally {
-
         setUploading(
           false
         );
-
       }
-
     };
-
 
   /* ===================================================
      DOWNLOAD
@@ -1584,11 +1262,9 @@ export default function Home() {
     async (
       suppliedCode = ""
     ) => {
-
       const code =
         suppliedCode ||
         receiveCode;
-
 
       if (
         !/^\d{5}$/.test(
@@ -1596,38 +1272,29 @@ export default function Home() {
         ) ||
         downloading
       ) {
-
         return;
-
       }
-
 
       setDownloading(
         true
       );
 
-
       setDownloadProgress(
         0
       );
-
 
       setDownloadedBytes(
         0
       );
 
-
       setDownloadTotal(
         0
       );
 
-
       setError("");
       setMessage("");
 
-
       try {
-
         const data =
           await callTransferFunction(
             "prepare-download",
@@ -1636,34 +1303,26 @@ export default function Home() {
             }
           );
 
-
         if (
           !data?.url
         ) {
-
           throw new Error(
             "Server did not return a download URL."
           );
-
         }
-
 
         const response =
           await fetch(
             data.url
           );
 
-
         if (
           !response.ok
         ) {
-
           throw new Error(
             "Unable to download file."
           );
-
         }
-
 
         const total =
           Number(
@@ -1676,67 +1335,50 @@ export default function Home() {
           ) ||
           0;
 
-
         setDownloadTotal(
           total
         );
 
-
         const chunks =
           [];
-
 
         let received =
           0;
 
-
         if (
           response.body
         ) {
-
           const reader =
             response.body.getReader();
 
-
-          while (
-            true
-          ) {
-
+          while (true) {
             const {
               done,
               value,
             } =
               await reader.read();
 
-
             if (
               done
             ) {
-
               break;
-
             }
-
 
             chunks.push(
               value
             );
 
-
             received +=
               value.byteLength;
-
 
             setDownloadedBytes(
               received
             );
 
-
             if (
               total >
               0
             ) {
-
               setDownloadProgress(
                 Math.min(
                   100,
@@ -1747,13 +1389,9 @@ export default function Home() {
                   )
                 )
               );
-
             }
-
           }
-
         }
-
 
         const blob =
           new Blob(
@@ -1765,55 +1403,43 @@ export default function Home() {
             }
           );
 
-
         setDownloadProgress(
           100
         );
 
-
-        const url =
+        const blobUrl =
           URL.createObjectURL(
             blob
           );
-
 
         const link =
           document.createElement(
             "a"
           );
 
-
         link.href =
-          url;
-
+          blobUrl;
 
         link.download =
           data.fileName ||
           "HoneyShare-file";
 
-
         document.body.appendChild(
           link
         );
 
-
         link.click();
-
 
         link.remove();
 
-
         setTimeout(
           () => {
-
             URL.revokeObjectURL(
-              url
+              blobUrl
             );
-
           },
           2000
         );
-
 
         await callTransferFunction(
           "complete-download",
@@ -1823,41 +1449,29 @@ export default function Home() {
           }
         );
 
-
-        setReceiveCode(
-          ""
-        );
-
+        setReceiveCode("");
 
         setMessage(
           "Download complete. File deleted automatically."
         );
-
       } catch (
         err
       ) {
-
         console.error(
           "Download error:",
           err
         );
 
-
         setError(
           err?.message ||
             "Download failed."
         );
-
       } finally {
-
         setDownloading(
           false
         );
-
       }
-
     };
-
 
   /* ===================================================
      QR
@@ -1869,14 +1483,12 @@ export default function Home() {
       ? `${origin}/?code=${transferCode}`
       : "";
 
-
   /* ===================================================
      RESET
   =================================================== */
 
   const resetUpload =
     () => {
-
       setFiles([]);
 
       setTransferCode("");
@@ -1888,7 +1500,6 @@ export default function Home() {
       setRemainingSeconds(
         0
       );
-
 
       setUploadProgress(
         0
@@ -1906,38 +1517,31 @@ export default function Home() {
         ""
       );
 
-
       setMessage("");
       setError("");
-
 
       if (
         fileInputRef.current
       ) {
-
         fileInputRef.current.value =
           "";
-
       }
-
     };
 
-
   /* ===================================================
-     SIZE
+     TOTAL SELECTED SIZE
   =================================================== */
 
   const totalSelectedSize =
     files.reduce(
       (
-        sum,
+        total,
         file
       ) =>
-        sum +
+        total +
         file.size,
       0
     );
-
 
   /* ===================================================
      UI
@@ -1947,11 +1551,9 @@ export default function Home() {
     <main
       className={`page ${theme}`}
     >
-
       <div className="background-glow glow-one" />
 
       <div className="background-glow glow-two" />
-
 
       <section className="container">
 
@@ -1986,9 +1588,7 @@ export default function Home() {
 
             <div
               className="live-users-badge"
-              title="Currently active visitors"
             >
-
               <span className="live-users-dot" />
 
               <strong>
@@ -1998,7 +1598,6 @@ export default function Home() {
               <span>
                 Live
               </span>
-
             </div>
 
 
@@ -2010,12 +1609,10 @@ export default function Home() {
               }
               aria-label="Toggle theme"
             >
-
               {theme ===
               "dark"
                 ? "☀️"
                 : "🌙"}
-
             </button>
 
           </div>
@@ -2081,7 +1678,7 @@ export default function Home() {
 
               <>
 
-                {/* DROP */}
+                {/* DROP AREA */}
 
                 <label
                   className={`drop-zone ${
@@ -2178,7 +1775,7 @@ export default function Home() {
                 </label>
 
 
-                {/* FILE LIST */}
+                {/* SELECTED FILES */}
 
                 {files.length >
                   0 && (
@@ -2265,7 +1862,10 @@ export default function Home() {
 
 
                       <strong>
-                        {uploadProgress}%
+                        {
+                          uploadProgress
+                        }
+                        %
                       </strong>
 
                     </div>
@@ -2303,7 +1903,7 @@ export default function Home() {
                 )}
 
 
-                {/* BUTTON */}
+                {/* UPLOAD BUTTON */}
 
                 <button
                   type="button"
@@ -2509,9 +2109,7 @@ export default function Home() {
                 type="text"
                 inputMode="numeric"
                 autoComplete="off"
-                maxLength={
-                  5
-                }
+                maxLength={5}
                 placeholder="00000"
                 value={
                   receiveCode
@@ -2522,7 +2120,6 @@ export default function Home() {
 
                   setError("");
                   setMessage("");
-
 
                   setReceiveCode(
                     event.target.value
@@ -2558,7 +2155,6 @@ export default function Home() {
                   <span>
                     Downloading
                   </span>
-
 
                   <strong>
                     {
@@ -2703,7 +2299,6 @@ export default function Home() {
             HoneyShare
           </span>
 
-
           <span>
             •
           </span>
@@ -2730,7 +2325,6 @@ export default function Home() {
         </footer>
 
       </section>
-
     </main>
   );
 }
