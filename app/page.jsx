@@ -24,9 +24,6 @@ const SUPABASE_KEY =
 const FUNCTION_URL =
   `${SUPABASE_URL}/functions/v1/transfer-v2`;
 
-const STORAGE_BUCKET =
-  "temporary-files";
-
 const MAX_FILE_SIZE =
   50 * 1024 * 1024;
 
@@ -50,7 +47,7 @@ const supabase =
    HELPERS
 ===================================================== */
 
-function formatBytes(bytes) {
+function formatFileSize(bytes) {
   if (!bytes || bytes <= 0) {
     return "0 B";
   }
@@ -73,9 +70,7 @@ function formatBytes(bytes) {
 
 function formatTime(seconds) {
   const minutes =
-    Math.floor(
-      seconds / 60
-    );
+    Math.floor(seconds / 60);
 
   const remaining =
     seconds % 60;
@@ -114,12 +109,12 @@ function getVisitorId() {
   } catch {
     return `visitor-${Date.now()}-${Math.random()
       .toString(36)
-      .slice(2)}`;
+      .slice(2, 10)}`;
   }
 }
 
 /* =====================================================
-   EDGE FUNCTION
+   TRANSFER FUNCTION
 ===================================================== */
 
 async function callTransferFunction(
@@ -141,9 +136,14 @@ async function callTransferFunction(
     );
 
   if (error) {
+    console.error(
+      "transfer-v2 error:",
+      error
+    );
+
     throw new Error(
       error.message ||
-        "Unable to contact transfer server."
+        "Unable to contact HoneyShare server."
     );
   }
 
@@ -299,6 +299,9 @@ export default function Home() {
   const presenceChannelRef =
     useRef(null);
 
+  const qrAttempted =
+    useRef(false);
+
   /* ===================================================
      INITIALIZATION
   =================================================== */
@@ -323,30 +326,38 @@ export default function Home() {
     }
 
     /* -----------------------------------------------
-       VISITOR ANALYTICS
+       ANALYTICS
     ------------------------------------------------ */
 
-    const visitorId =
-      getVisitorId();
+    const initializeAnalytics =
+      async () => {
+        const visitorId =
+          getVisitorId();
 
-    supabase
-      .rpc(
-        "record_visitor",
-        {
-          p_visitor_id:
-            visitorId,
+        try {
+          await supabase.rpc(
+            "record_visitor",
+            {
+              p_visitor_id:
+                visitorId,
+            }
+          );
+        } catch (err) {
+          console.error(
+            "Visitor tracking error:",
+            err
+          );
         }
-      )
-      .catch((err) => {
-        console.error(
-          "Visitor tracking error:",
-          err
-        );
-      });
+      };
+
+    initializeAnalytics();
 
     /* -----------------------------------------------
        LIVE USERS
     ------------------------------------------------ */
+
+    const visitorId =
+      getVisitorId();
 
     const channel =
       supabase.channel(
@@ -412,13 +423,15 @@ export default function Home() {
           "SUBSCRIBED"
         ) {
           try {
-            await channel.track({
-              visitor_id:
-                visitorId,
+            await channel.track(
+              {
+                visitor_id:
+                  visitorId,
 
-              online_at:
-                new Date().toISOString(),
-            });
+                online_at:
+                  new Date().toISOString(),
+              }
+            );
 
             updateLiveUsers();
           } catch (err) {
@@ -451,7 +464,10 @@ export default function Home() {
 
   useEffect(() => {
     if (!expiresAt) {
-      setRemainingSeconds(0);
+      setRemainingSeconds(
+        0
+      );
+
       return;
     }
 
@@ -477,7 +493,8 @@ export default function Home() {
         );
 
         if (
-          seconds <= 0
+          seconds <=
+          0
         ) {
           setTransferCode("");
           setExpiresAt(null);
@@ -509,12 +526,13 @@ export default function Home() {
   const toggleTheme =
     () => {
       const next =
-        theme ===
-        "dark"
+        theme === "dark"
           ? "light"
           : "dark";
 
-      setTheme(next);
+      setTheme(
+        next
+      );
 
       localStorage.setItem(
         "honeyshare-theme",
@@ -523,7 +541,7 @@ export default function Home() {
     };
 
   /* ===================================================
-     FILE VALIDATION
+     VALIDATE FILES
   =================================================== */
 
   const validateFiles =
@@ -566,7 +584,9 @@ export default function Home() {
 
       const hasOversized =
         selected.some(
-          (file) =>
+          (
+            file
+          ) =>
             file.size >
             MAX_FILE_SIZE
         );
@@ -616,9 +636,9 @@ export default function Home() {
     (indexToRemove) => {
       setFiles(
         (
-          current
+          currentFiles
         ) =>
-          current.filter(
+          currentFiles.filter(
             (
               _,
               index
@@ -675,7 +695,7 @@ export default function Home() {
     };
 
   /* ===================================================
-     CREATE ZIP
+     ZIP
   =================================================== */
 
   const prepareUploadFile =
@@ -710,10 +730,10 @@ export default function Home() {
         files.reduce(
           (
             total,
-            item
+            file
           ) =>
             total +
-            item.size,
+            file.size,
           0
         )
       );
@@ -744,6 +764,7 @@ export default function Home() {
             streamFiles:
               true,
           },
+
           (
             metadata
           ) => {
@@ -777,13 +798,9 @@ export default function Home() {
   /* ===================================================
      SIGNED UPLOAD WITH REAL PROGRESS
 
-     IMPORTANT:
-     - Same signed token/path flow
-     - NO anonymous login
-     - NO Authorization header
-     - NO apikey header
-     - PUT request, matching Supabase signed-upload
-     - Browser XHR progress events
+     Same backend signed-upload flow.
+     No anonymous authentication.
+     No RLS changes.
   =================================================== */
 
   const uploadToSignedUrlWithProgress =
@@ -823,12 +840,11 @@ export default function Home() {
             }
 
             /*
-              Supabase's Storage SDK builds the signed
-              upload endpoint under:
+              IMPORTANT:
+              Do not prepend bucket here.
 
-              /storage/v1/object/upload/sign/
-
-              and includes the bucket in the path.
+              Your transfer-v2 function already returns
+              the correct signed upload path.
             */
 
             const baseUrl =
@@ -837,15 +853,14 @@ export default function Home() {
                 ""
               );
 
-            const finalPath =
-              [
-                STORAGE_BUCKET,
-                ...String(
-                  path
+            const cleanPath =
+              String(
+                path
+              )
+                .split(
+                  "/"
                 )
-                  .split("/")
-                  .filter(Boolean),
-              ]
+                .filter(Boolean)
                 .map(
                   (
                     part
@@ -854,39 +869,33 @@ export default function Home() {
                       part
                     )
                 )
-                .join("/");
+                .join(
+                  "/"
+                );
 
-            const signedUrl =
-              `${baseUrl}/storage/v1/object/upload/sign/${finalPath}?token=${encodeURIComponent(
+            const signedUploadUrl =
+              `${baseUrl}/storage/v1/object/upload/sign/${cleanPath}?token=${encodeURIComponent(
                 token
               )}`;
 
             const xhr =
               new XMLHttpRequest();
 
+            /*
+              Supabase signed upload uses POST for the
+              browser request generated by storage-js.
+            */
+
             xhr.open(
-              "PUT",
-              signedUrl,
+              "POST",
+              signedUploadUrl,
               true
             );
 
             /*
-              DO NOT add:
-              Authorization
-              apikey
-
-              Signed upload token is the authorization
-              mechanism for this request.
-            */
-
-            xhr.setRequestHeader(
-              "x-upsert",
-              "false"
-            );
-
-            /*
-              Supabase signed File upload uses FormData
-              with cacheControl and the file body.
+              Do NOT add Authorization or apikey here.
+              The signed token in the URL is used by
+              Supabase Storage.
             */
 
             const formData =
@@ -919,7 +928,7 @@ export default function Home() {
             );
 
             /*
-              REAL UPLOAD PROGRESS
+              REAL BROWSER UPLOAD PROGRESS
             */
 
             xhr.upload.onprogress =
@@ -1014,7 +1023,7 @@ export default function Home() {
                       parsed.message;
                   }
                 } catch {
-                  /* Keep original response */
+                  /* Keep raw response */
                 }
 
                 reject(
@@ -1092,8 +1101,7 @@ export default function Home() {
 
       try {
         /*
-          Step 1:
-          Prepare single file or ZIP.
+          Create original file or ZIP.
         */
 
         const uploadFile =
@@ -1115,14 +1123,14 @@ export default function Home() {
           0
         );
 
-        /*
-          Step 2:
-          Same backend initialization.
-        */
-
         setUploadStage(
           "Creating secure transfer..."
         );
+
+        /*
+          IMPORTANT:
+          Same working transfer-v2 init.
+        */
 
         const initData =
           await callTransferFunction(
@@ -1157,11 +1165,7 @@ export default function Home() {
         }
 
         /*
-          Step 3:
-          ACTUAL upload with real XHR progress.
-
-          No anonymous auth.
-          No manual Authorization.
+          REAL UPLOAD
         */
 
         await uploadToSignedUrlWithProgress(
@@ -1171,8 +1175,7 @@ export default function Home() {
         );
 
         /*
-          Step 4:
-          Activate transfer.
+          ACTIVATE
         */
 
         setUploadStage(
@@ -1188,8 +1191,7 @@ export default function Home() {
         );
 
         /*
-          Step 5:
-          Success.
+          SUCCESS
         */
 
         setTransferCode(
@@ -1223,9 +1225,7 @@ export default function Home() {
         setMessage(
           "File uploaded successfully."
         );
-      } catch (
-        err
-      ) {
+      } catch (err) {
         console.error(
           "Upload error:",
           err
@@ -1351,7 +1351,9 @@ export default function Home() {
           const reader =
             response.body.getReader();
 
-          while (true) {
+          while (
+            true
+          ) {
             const {
               done,
               value,
@@ -1449,14 +1451,14 @@ export default function Home() {
           }
         );
 
-        setReceiveCode("");
+        setReceiveCode(
+          ""
+        );
 
         setMessage(
           "Download complete. File deleted automatically."
         );
-      } catch (
-        err
-      ) {
+      } catch (err) {
         console.error(
           "Download error:",
           err
@@ -1483,12 +1485,68 @@ export default function Home() {
       ? `${origin}/?code=${transferCode}`
       : "";
 
+
+  /* ===================================================
+     QR AUTO DOWNLOAD
+  =================================================== */
+
+  useEffect(() => {
+    if (
+      qrAttempted.current
+    ) {
+      return;
+    }
+
+    const params =
+      new URLSearchParams(
+        window.location.search
+      );
+
+    const code =
+      params.get("code");
+
+    if (
+      code &&
+      /^\d{5}$/.test(
+        code
+      )
+    ) {
+      qrAttempted.current =
+        true;
+
+      setReceiveCode(
+        code
+      );
+
+      setMessage(
+        "Transfer found. Starting download..."
+      );
+
+      const timer =
+        setTimeout(
+          () => {
+            downloadFile(
+              code
+            );
+          },
+          700
+        );
+
+      return () =>
+        clearTimeout(
+          timer
+        );
+    }
+  }, []);
+
+
   /* ===================================================
      RESET
   =================================================== */
 
   const resetUpload =
     () => {
+
       setFiles([]);
 
       setTransferCode("");
@@ -1513,9 +1571,7 @@ export default function Home() {
         0
       );
 
-      setUploadStage(
-        ""
-      );
+      setUploadStage("");
 
       setMessage("");
       setError("");
@@ -1528,8 +1584,9 @@ export default function Home() {
       }
     };
 
+
   /* ===================================================
-     TOTAL SELECTED SIZE
+     TOTAL SIZE
   =================================================== */
 
   const totalSelectedSize =
@@ -1543,6 +1600,7 @@ export default function Home() {
       0
     );
 
+
   /* ===================================================
      UI
   =================================================== */
@@ -1551,9 +1609,11 @@ export default function Home() {
     <main
       className={`page ${theme}`}
     >
+
       <div className="background-glow glow-one" />
 
       <div className="background-glow glow-two" />
+
 
       <section className="container">
 
@@ -1588,7 +1648,9 @@ export default function Home() {
 
             <div
               className="live-users-badge"
+              title="Currently active visitors"
             >
+
               <span className="live-users-dot" />
 
               <strong>
@@ -1598,6 +1660,7 @@ export default function Home() {
               <span>
                 Live
               </span>
+
             </div>
 
 
@@ -1609,10 +1672,12 @@ export default function Home() {
               }
               aria-label="Toggle theme"
             >
+
               {theme ===
               "dark"
                 ? "☀️"
                 : "🌙"}
+
             </button>
 
           </div>
@@ -1650,7 +1715,7 @@ export default function Home() {
 
           {/* SEND */}
 
-          <section className="card">
+          <section className="card send-card">
 
             <div className="card-top">
 
@@ -1678,7 +1743,7 @@ export default function Home() {
 
               <>
 
-                {/* DROP AREA */}
+                {/* DROP ZONE */}
 
                 <label
                   className={`drop-zone ${
@@ -1758,7 +1823,7 @@ export default function Home() {
 
 
                       <span>
-                        {formatBytes(
+                        {formatFileSize(
                           totalSelectedSize
                         )}
                       </span>
@@ -1775,7 +1840,7 @@ export default function Home() {
                 </label>
 
 
-                {/* SELECTED FILES */}
+                {/* FILE LIST */}
 
                 {files.length >
                   0 && (
@@ -1810,7 +1875,7 @@ export default function Home() {
 
 
                           <small>
-                            {formatBytes(
+                            {formatFileSize(
                               file.size
                             )}
                           </small>
@@ -1864,8 +1929,7 @@ export default function Home() {
                       <strong>
                         {
                           uploadProgress
-                        }
-                        %
+                        }%
                       </strong>
 
                     </div>
@@ -1886,13 +1950,13 @@ export default function Home() {
 
                     <div className="progress-detail">
 
-                      {formatBytes(
+                      {formatFileSize(
                         uploadedBytes
                       )}
 
                       {" / "}
 
-                      {formatBytes(
+                      {formatFileSize(
                         uploadTotalBytes
                       )}
 
@@ -1937,7 +2001,7 @@ export default function Home() {
 
             ) : (
 
-              /* UPLOADED */
+              /* UPLOADED STATE */
 
               <div className="success-area">
 
@@ -2019,7 +2083,9 @@ export default function Home() {
                         resetUpload
                       }
                     >
+
                       Send another file
+
                     </button>
 
                   </div>
@@ -2057,7 +2123,7 @@ export default function Home() {
 
 
                     <span className="qr-hint">
-                      Opens secure download page
+                      Scan with your phone camera
                     </span>
 
                   </div>
@@ -2073,7 +2139,7 @@ export default function Home() {
 
           {/* RECEIVE */}
 
-          <section className="card">
+          <section className="card receive-card">
 
             <div className="card-top">
 
@@ -2109,7 +2175,9 @@ export default function Home() {
                 type="text"
                 inputMode="numeric"
                 autoComplete="off"
-                maxLength={5}
+                maxLength={
+                  5
+                }
                 placeholder="00000"
                 value={
                   receiveCode
@@ -2156,11 +2224,11 @@ export default function Home() {
                     Downloading
                   </span>
 
+
                   <strong>
                     {
                       downloadProgress
-                    }
-                    %
+                    }%
                   </strong>
 
                 </div>
@@ -2181,14 +2249,14 @@ export default function Home() {
 
                 <div className="progress-detail">
 
-                  {formatBytes(
+                  {formatFileSize(
                     downloadedBytes
                   )}
 
                   {" / "}
 
                   {downloadTotal
-                    ? formatBytes(
+                    ? formatFileSize(
                         downloadTotal
                       )
                     : "Calculating..."}
@@ -2299,6 +2367,7 @@ export default function Home() {
             HoneyShare
           </span>
 
+
           <span>
             •
           </span>
@@ -2325,6 +2394,7 @@ export default function Home() {
         </footer>
 
       </section>
+
     </main>
   );
 }
