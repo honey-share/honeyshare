@@ -24,12 +24,17 @@ const SUPABASE_KEY =
 const FUNCTION_URL =
   `${SUPABASE_URL}/functions/v1/transfer-v2`;
 
+const STORAGE_BUCKET =
+  "temporary-files";
+
 const MAX_FILE_SIZE =
   50 * 1024 * 1024;
 
-const MAX_FILES = 10;
+const MAX_FILES =
+  10;
 
-const TRANSFER_SECONDS = 5 * 60;
+const TRANSFER_SECONDS =
+  5 * 60;
 
 const VISITOR_STORAGE_KEY =
   "honeyshare-visitor-id";
@@ -114,7 +119,7 @@ function getVisitorId() {
 }
 
 /* =====================================================
-   TRANSFER FUNCTION
+   EDGE FUNCTION
 ===================================================== */
 
 async function callTransferFunction(
@@ -496,8 +501,13 @@ export default function Home() {
           seconds <=
           0
         ) {
-          setTransferCode("");
-          setExpiresAt(null);
+          setTransferCode(
+            ""
+          );
+
+          setExpiresAt(
+            null
+          );
 
           setMessage(
             "Transfer expired. The file will be removed automatically."
@@ -517,7 +527,9 @@ export default function Home() {
       clearInterval(
         interval
       );
-  }, [expiresAt]);
+  }, [
+    expiresAt,
+  ]);
 
   /* ===================================================
      THEME
@@ -526,7 +538,8 @@ export default function Home() {
   const toggleTheme =
     () => {
       const next =
-        theme === "dark"
+        theme ===
+        "dark"
           ? "light"
           : "dark";
 
@@ -541,7 +554,7 @@ export default function Home() {
     };
 
   /* ===================================================
-     VALIDATE FILES
+     FILE VALIDATION
   =================================================== */
 
   const validateFiles =
@@ -582,7 +595,7 @@ export default function Home() {
           0
         );
 
-      const hasOversized =
+      const oversized =
         selected.some(
           (
             file
@@ -592,7 +605,7 @@ export default function Home() {
         );
 
       if (
-        hasOversized
+        oversized
       ) {
         setError(
           "One of the files is larger than the 50 MB limit."
@@ -695,7 +708,7 @@ export default function Home() {
     };
 
   /* ===================================================
-     ZIP
+     ZIP PREPARATION
   =================================================== */
 
   const prepareUploadFile =
@@ -726,7 +739,7 @@ export default function Home() {
         0
       );
 
-      setUploadTotalBytes(
+      const originalTotal =
         files.reduce(
           (
             total,
@@ -735,7 +748,10 @@ export default function Home() {
             total +
             file.size,
           0
-        )
+        );
+
+      setUploadTotalBytes(
+        originalTotal
       );
 
       const zip =
@@ -798,9 +814,19 @@ export default function Home() {
   /* ===================================================
      SIGNED UPLOAD WITH REAL PROGRESS
 
-     Same backend signed-upload flow.
-     No anonymous authentication.
-     No RLS changes.
+     IMPORTANT:
+     This intentionally mirrors the request made by
+     Supabase Storage's uploadToSignedUrl():
+
+       PUT
+       /storage/v1/object/upload/sign/{bucket}/{path}
+       ?token=...
+
+     The Authorization and apikey headers are included
+     because the Supabase client includes its default
+     headers in the signed upload request.
+
+     No anonymous login is needed.
   =================================================== */
 
   const uploadToSignedUrlWithProgress =
@@ -828,6 +854,30 @@ export default function Home() {
             }
 
             if (
+              !SUPABASE_KEY
+            ) {
+              reject(
+                new Error(
+                  "Missing Supabase public key."
+                )
+              );
+
+              return;
+            }
+
+            if (
+              !path
+            ) {
+              reject(
+                new Error(
+                  "Missing upload path."
+                )
+              );
+
+              return;
+            }
+
+            if (
               !token
             ) {
               reject(
@@ -839,28 +889,45 @@ export default function Home() {
               return;
             }
 
-            /*
-              IMPORTANT:
-              Do not prepend bucket here.
-
-              Your transfer-v2 function already returns
-              the correct signed upload path.
-            */
-
             const baseUrl =
               SUPABASE_URL.replace(
                 /\/$/,
                 ""
               );
 
-            const cleanPath =
+            /*
+              transfer-v2 returns the path inside
+              the temporary-files bucket.
+
+              Supabase's storage-js internally builds:
+
+              object/upload/sign/{bucket}/{path}
+
+              so we do the same here.
+            */
+
+            const normalizedPath =
               String(
                 path
               )
-                .split(
-                  "/"
+                .replace(
+                  /^\/+/,
+                  ""
                 )
-                .filter(Boolean)
+                .replace(
+                  new RegExp(
+                    `^${STORAGE_BUCKET}/`
+                  ),
+                  ""
+                );
+
+            const encodedPath =
+              [
+                STORAGE_BUCKET,
+                ...normalizedPath
+                  .split("/")
+                  .filter(Boolean),
+              ]
                 .map(
                   (
                     part
@@ -869,12 +936,10 @@ export default function Home() {
                       part
                     )
                 )
-                .join(
-                  "/"
-                );
+                .join("/");
 
             const signedUploadUrl =
-              `${baseUrl}/storage/v1/object/upload/sign/${cleanPath}?token=${encodeURIComponent(
+              `${baseUrl}/storage/v1/object/upload/sign/${encodedPath}?token=${encodeURIComponent(
                 token
               )}`;
 
@@ -882,20 +947,45 @@ export default function Home() {
               new XMLHttpRequest();
 
             /*
-              Supabase signed upload uses POST for the
-              browser request generated by storage-js.
+              THIS IS THE IMPORTANT FIX.
+
+              Supabase's signed upload request uses PUT.
             */
 
             xhr.open(
-              "POST",
+              "PUT",
               signedUploadUrl,
               true
             );
 
             /*
-              Do NOT add Authorization or apikey here.
-              The signed token in the URL is used by
-              Supabase Storage.
+              Supabase client default headers.
+
+              These are needed by the Storage API's request
+              authentication layer and match the headers used
+              by the Supabase client.
+            */
+
+            xhr.setRequestHeader(
+              "Authorization",
+              `Bearer ${SUPABASE_KEY}`
+            );
+
+            xhr.setRequestHeader(
+              "apikey",
+              SUPABASE_KEY
+            );
+
+            xhr.setRequestHeader(
+              "x-upsert",
+              "false"
+            );
+
+            /*
+              For File / Blob, Supabase creates FormData
+              containing:
+                cacheControl
+                file body
             */
 
             const formData =
@@ -928,7 +1018,7 @@ export default function Home() {
             );
 
             /*
-              REAL BROWSER UPLOAD PROGRESS
+              REAL UPLOAD PROGRESS
             */
 
             xhr.upload.onprogress =
@@ -1011,16 +1101,16 @@ export default function Home() {
                   "Unknown upload error.";
 
                 try {
-                  const parsed =
+                  const json =
                     JSON.parse(
                       xhr.responseText
                     );
 
                   if (
-                    parsed?.message
+                    json?.message
                   ) {
                     details =
-                      parsed.message;
+                      json.message;
                   }
                 } catch {
                   /* Keep raw response */
@@ -1057,7 +1147,9 @@ export default function Home() {
           } catch (
             err
           ) {
-            reject(err);
+            reject(
+              err
+            );
           }
         }
       );
@@ -1101,14 +1193,14 @@ export default function Home() {
 
       try {
         /*
-          Create original file or ZIP.
+          1. Prepare original file or ZIP.
         */
 
         const uploadFile =
           await prepareUploadFile();
 
         /*
-          Reset network progress after ZIP creation.
+          2. Reset network progress.
         */
 
         setUploadedBytes(
@@ -1128,8 +1220,8 @@ export default function Home() {
         );
 
         /*
-          IMPORTANT:
-          Same working transfer-v2 init.
+          3. Create transfer using the existing
+             transfer-v2 Edge Function.
         */
 
         const initData =
@@ -1165,7 +1257,7 @@ export default function Home() {
         }
 
         /*
-          REAL UPLOAD
+          4. Upload with ACTUAL browser progress.
         */
 
         await uploadToSignedUrlWithProgress(
@@ -1175,7 +1267,7 @@ export default function Home() {
         );
 
         /*
-          ACTIVATE
+          5. Activate transfer.
         */
 
         setUploadStage(
@@ -1191,7 +1283,7 @@ export default function Home() {
         );
 
         /*
-          SUCCESS
+          6. Success.
         */
 
         setTransferCode(
@@ -1225,7 +1317,9 @@ export default function Home() {
         setMessage(
           "File uploaded successfully."
         );
-      } catch (err) {
+      } catch (
+        err
+      ) {
         console.error(
           "Upload error:",
           err
@@ -1451,9 +1545,7 @@ export default function Home() {
           }
         );
 
-        setReceiveCode(
-          ""
-        );
+        setReceiveCode("");
 
         setMessage(
           "Download complete. File deleted automatically."
@@ -1484,7 +1576,6 @@ export default function Home() {
     transferCode
       ? `${origin}/?code=${transferCode}`
       : "";
-
 
   /* ===================================================
      QR AUTO DOWNLOAD
@@ -1539,14 +1630,12 @@ export default function Home() {
     }
   }, []);
 
-
   /* ===================================================
      RESET
   =================================================== */
 
   const resetUpload =
     () => {
-
       setFiles([]);
 
       setTransferCode("");
@@ -1584,7 +1673,6 @@ export default function Home() {
       }
     };
 
-
   /* ===================================================
      TOTAL SIZE
   =================================================== */
@@ -1600,7 +1688,6 @@ export default function Home() {
       0
     );
 
-
   /* ===================================================
      UI
   =================================================== */
@@ -1611,9 +1698,7 @@ export default function Home() {
     >
 
       <div className="background-glow glow-one" />
-
       <div className="background-glow glow-two" />
-
 
       <section className="container">
 
@@ -1709,13 +1794,13 @@ export default function Home() {
         </section>
 
 
-        {/* CARDS */}
+        {/* TRANSFER GRID */}
 
         <div className="transfer-grid">
 
           {/* SEND */}
 
-          <section className="card send-card">
+          <section className="card">
 
             <div className="card-top">
 
@@ -1900,7 +1985,9 @@ export default function Home() {
 
                             }}
                           >
+
                             ×
+
                           </button>
 
                         </div>
@@ -2394,7 +2481,6 @@ export default function Home() {
         </footer>
 
       </section>
-
     </main>
   );
 }
